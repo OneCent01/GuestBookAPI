@@ -79,14 +79,6 @@ app.get('/delete-customers', (req, res) => {
 })
 
 
-/************ ASSOCIATIONS ***************/
-app.get('/associate-face', (req, res) => {
-	// TODO
-})
-
-// no need to associate transactions with customers explicitly, 
-// should link it with the customer automatically when it's added
-
 
 /*********** START THE SERVER ************/
 const server = app.listen(port, () => console.log(`Listening on port ${port}...`))
