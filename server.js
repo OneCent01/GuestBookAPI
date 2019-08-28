@@ -1,6 +1,7 @@
 const express = require('express')
-
 const app = express()
+
+const port = process.env.PORT || 3000
 
 app.get('/', (req, res) => {
 	res.send('YOU\'VE ARRIVED AT THE GUESETBOOK API ENDPOINT!')
@@ -79,7 +80,6 @@ app.get('/delete-customers', (req, res) => {
 
 
 /************ ASSOCIATIONS ***************/
-
 app.get('/associate-face', (req, res) => {
 	// TODO
 })
@@ -88,4 +88,5 @@ app.get('/associate-face', (req, res) => {
 // should link it with the customer automatically when it's added
 
 
-const server = app.listen(3000, () => console.log('Listening on port 3000...'))
+/*********** START THE SERVER ************/
+const server = app.listen(port, () => console.log(`Listening on port ${port}...`))
