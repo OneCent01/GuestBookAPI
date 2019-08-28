@@ -53,3 +53,22 @@ Node can be easily installed with homebrew on a Mac with `brew install node`
 `npm run start` OR `node server.js`
 4. Open a browser and type in the URL bar
 `localhost:3000` OR (URL endpoint at which it was deployed)
+
+
+### Deploy to Heroku
+1. Open the terminal
+2. Install the Heroku CLI
+  - On a Mac this is easily accomplished via Homebrew with: 
+  `brew tap heroku/brew && brew install heroku`
+3. Navigate to the root of this repo in your local system
+4. Login to heroku
+`heroku login`
+5. Create the endpoint to which this code will be uploaded
+`heroku create`
+6. Push the code to the newly created endpoint: 
+`git push heroku master`
+7. In a browser, open the application at the assigned endpoint (you'll see it in the terminal after the previous command)
+
+Can be found an already deployed instance here: 
+https://limitless-bayou-46474.herokuapp.com/
+
