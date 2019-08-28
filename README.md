@@ -69,6 +69,6 @@ Node can be easily installed with homebrew on a Mac with `brew install node`
 `git push heroku master`
 7. In a browser, open the application at the assigned endpoint (you'll see it in the terminal after the previous command)
 
-Can be found an already deployed instance here: 
+An already deployed instance can be found here: 
 https://limitless-bayou-46474.herokuapp.com/
 
