@@ -1,16 +1,34 @@
 const express = require('express')
 const app = express()
 
-const port = process.env.PORT || 3000
+const port = process.env.PORT || 3000;
+
+const {
+	addUser, 
+	getAllUsers,
+	initGuestBookTables
+} = require('./dbQueries.js')
+
 
 app.get('/', (req, res) => {
-	res.send('YOU\'VE ARRIVED AT THE GUESETBOOK API ENDPOINT!')
+	// initGuestBookTables().then(res => console.log('res: ', res)).catch(err => console.log('err: ', err))
+	getAllUsers()
+		.then(rows => res.send(`All users: ${JSON.stringify(rows)}`))
+		.catch(err => res.send(`Failed to retrieve all users: ${err}`))
 })
 
 
 /********* USERS *************/
 app.get('/add-user', (req, res) => {
 	// TODO
+	addUser(1, 'jmpenney22+test1@gmail.com', 'farts1')
+		.then(res => {
+			console.log('success!')
+			getAllUsers()
+				.then(rows => console.log('user rows: ', rows))
+				.catch(err => console.log('Failed to retrieve all users: ', err))
+		})
+		.catch(err => console.log('Failed to add user: ', err))
 })
 
 app.get('/get-user', (req, res) => {
