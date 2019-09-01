@@ -9,19 +9,14 @@ const queryIteration = (conn, query) => new Promise((resolve, reject) => {
 	
 });
 
-const iterateQuries = (conn, queries, cb, i=0) => {
+const executeQuries = (conn, queries, cb, i=0) => {
 	return queryIteration(conn, queries[i])
-		.then(res => {
-			return (
-				i < queries.length-1 
-					? iterateQuries(conn, queries, cb, i+1) 
-					: cb(true)
-			)
-		})
-		.catch(err => {
-			console.log('Query execution error: ', err)
-			return cb(false, err)
-		})
+		.then(res => (
+			i < queries.length-1 
+				? executeQuries(conn, queries, cb, i+1) 
+				: cb(true)
+		))
+		.catch(err => cb(false, err))
 }
 
 const initGuestBookDatabase = (conn) => new Promise(async (resolve, reject) => {
@@ -41,7 +36,7 @@ const initGuestBookTables = (conn) => new Promise((resolve, reject) => {
 		'CREATE TABLE CustomerTransactions(id int,customer_id int,transaction_id int,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id),FOREIGN KEY(transaction_id) REFERENCES Transactions(id));'
 	]
 
-	iterateQuries(
+	executeQuries(
 		conn, 
 		queries, 
 		(success, err) => success ? resolve() : reject(err)
