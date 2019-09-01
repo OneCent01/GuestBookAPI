@@ -1,23 +1,7 @@
 const {
-	handleQuery
+	handleQuery,
+	executeQueries
 } = require('./connect.js')
-
-const queryIteration = (conn, query) => new Promise((resolve, reject) => {
-	handleQuery(conn, query)
-		.then(res => resolve(res))
-		.catch(err => reject(err))
-	
-});
-
-const executeQuries = (conn, queries, cb, i=0) => {
-	return queryIteration(conn, queries[i])
-		.then(res => (
-			i < queries.length-1 
-				? executeQuries(conn, queries, cb, i+1) 
-				: cb(true)
-		))
-		.catch(err => cb(false, err))
-}
 
 const initGuestBookDatabase = (conn) => new Promise(async (resolve, reject) => {
 	handleQuery(conn, `CREATE DATABASE GuestBook;`)
@@ -36,12 +20,11 @@ const initGuestBookTables = (conn) => new Promise((resolve, reject) => {
 		'CREATE TABLE CustomerTransactions(id int,customer_id int,transaction_id int,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id),FOREIGN KEY(transaction_id) REFERENCES Transactions(id));'
 	]
 
-	executeQuries(
+	executeQueries(
 		conn, 
 		queries, 
 		(success, err) => success ? resolve() : reject(err)
 	)
-	
 })
 
 const getAllUsers = (conn) => handleQuery(conn, `SELECT * FROM Users`)
