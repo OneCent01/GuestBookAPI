@@ -1,18 +1,38 @@
 const express = require('express')
 const app = express()
 
+const mysql = require('mysql')
+
 const port = process.env.PORT || 3000;
 
 const {
 	addUser, 
-	getAllUsers,
-	initGuestBookTables
+	getAllUsers
 } = require('./dbQueries.js')
 
+const {
+	initAndCreatDbIfNone
+} = require('./initDatabase.js')
 
+// these options here are what we change to configure connections to 
+// mySQL databases, including external ones
+const connectionOps = {
+	host: 'localhost',
+	user: 'root',
+	password: '123456'
+}
+
+let connection = mysql.createConnection({
+	...connectionOps,
+	database: 'guestbook'
+})
+
+initAndCreatDbIfNone(connection, connectionOps)
+
+
+/********** ROOT **************/
 app.get('/', (req, res) => {
-	// initGuestBookTables().then(res => console.log('res: ', res)).catch(err => console.log('err: ', err))
-	getAllUsers()
+	getAllUsers(connection)
 		.then(rows => res.send(`All users: ${JSON.stringify(rows)}`))
 		.catch(err => res.send(`Failed to retrieve all users: ${err}`))
 })
@@ -20,15 +40,18 @@ app.get('/', (req, res) => {
 
 /********* USERS *************/
 app.get('/add-user', (req, res) => {
-	// TODO
-	addUser(1, 'jmpenney22+test1@gmail.com', 'farts1')
-		.then(res => {
-			console.log('success!')
-			getAllUsers()
-				.then(rows => console.log('user rows: ', rows))
-				.catch(err => console.log('Failed to retrieve all users: ', err))
-		})
-		.catch(err => console.log('Failed to add user: ', err))
+	addUser(connection, {
+		index: 1, 
+		email: 'jmpenney22+test1@gmail.com', 
+		pass: '123'
+	})
+	.then(res => {
+		console.log('Success! User added.')
+		getAllUsers(connection)
+			.then(rows => console.log('user rows: ', rows))
+			.catch(err => console.log('Failed to retrieve all users: ', err))
+	})
+	.catch(err => console.log('Failed to add user: ', err))
 })
 
 app.get('/get-user', (req, res) => {

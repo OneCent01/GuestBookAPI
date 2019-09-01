@@ -1,16 +1,5 @@
-const mysql = require('mysql')
-
-const connection = mysql.createConnection({
-	host: 'localhost',
-	user: 'root',
-	password: 'password',
-	database: 'guestbook'
-})
-
-connection.connect(err => console.log(err ? err : 'connection established'))
-
-const initConnection = async () => new Promise((resolve, reject) => {
-	connection.connect(err => {
+const initConnection = (conn) => new Promise((resolve, reject) => {
+	conn.connect(err => {
 		if(err) {
 			reject({success: false, error: err})
 		} else {
@@ -19,10 +8,10 @@ const initConnection = async () => new Promise((resolve, reject) => {
 	})
 })
 
-const killConnection = async () => new Promise((resolve, reject) => connection.end(err => resolve(err)))
+const killConnection = (conn) => new Promise((resolve, reject) => conn.end(err => resolve(err)))
 
-const executeQuery = async query => new Promise((resolve, reject) => {
-	connection.query(query, (err, rows) => {
+const handleQuery = (conn, query) => new Promise((resolve, reject) => {
+	conn.query(query, (err, rows) => {
 		if(err) {
 			reject({success: false, error: err}) 
 		} else {
@@ -31,15 +20,8 @@ const executeQuery = async query => new Promise((resolve, reject) => {
 	})
 })
 
-const handleQuery = async query => {
-	const queryRes = await executeQuery(query)
-
-	if(!queryRes.success) {
-		return queryRes.error
-	} else {
-		return queryRes.data
-	}
+module.exports = { 
+	initConnection, 
+	killConnection,
+	handleQuery
 }
-
-
-module.exports = { handleQuery, initConnection, killConnection }
