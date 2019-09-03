@@ -26,7 +26,15 @@ const {
 	addUser, 
 	getAllUsers,
     getUser,
-    updateUser
+    updateUser,
+	deleteUser,
+	addFace,
+	getFaces,
+	addTransaction,
+	getTransactions,
+	addCustomer,
+	getCustomers,
+	deleteCustomer
 } = require('./dbQueries.js')
 
 const {
@@ -57,7 +65,7 @@ initAndCreatDbIfNone(connection, connectionOps)
 /********** ROOT **************/
 app.get('/', (req, res) => {
 	getAllUsers(connection)
-		.then(rows => res.send(JSON.stringify(rows)))
+		.then(getAllUsers_res => res.send(JSON.stringify(getAllUsers_res)))
 		.catch(err => res.send(JSON.stringify(err)))
 })
 
@@ -74,11 +82,11 @@ app.post('/add-user', (req, res) => {
 	.catch(err => res.send(JSON.stringify(err)))
 })
 
-app.get('/get-user/:email?/:index?', (req, res) => {
+app.get('/get-user/:email?/:id?', (req, res) => {
 	const lookup = (
-		req.query.index ? {index: req.query.index}
+		req.query.id ? {id: req.query.id}
 		: req.query.email ? {email: req.query.email}
-		: {index: 1}
+		: {id: 1}
 	)
 
 	getUser(connection, lookup)
@@ -86,71 +94,103 @@ app.get('/get-user/:email?/:index?', (req, res) => {
 	.catch(err => res.send(JSON.stringify(err)))
 })
 
-app.post('/update-user', (req, res) => {
+app.put('/update-user', (req, res) => {
+	const updateUserData = req.body
 	updateUser(connection, {
-        index: 1,
-        email: 'jmnanipenney22+test1@gmail.com',
-		pass: '456'
+        id: updateUserData.id,
+        email: updateUserData.email,
+		pass: updateUserData.password
 	})
-	.then(res => res.send(JSON.stringify({success: true, data: res})))
-	.catch(err => res.send(JSON.stringify({success: false, error: err})))
+	.then(updateUser_res => res.send(JSON.stringify(updateUser_res)))
+	.catch(err => res.send(JSON.stringify(err)))
 })
 
-app.post('/delete-user', (req, res) => {
-	// TODO
+app.delete('/delete-user', (req, res) => {
+	const deleteUserData = req.body
+	// should add a validation step where the password needs to be sent in 
+	// and compared against that stored in the database
+	deleteUser(connection, {
+		id: deleteUserData.id
+	})
+	.then(deleteUser_res => res.send(JSON.stringify(deleteUser_res)))
+	.catch(err => res.send(JSON.stringify(err)))
 })
 
 
 /************ FACES ***************/
-app.get('/add-face', (req, res) => {
-	// TODO
+app.post('/add-face', (req, res) => {
+	const addFaceData = req.body
+
+	addFace(connection, {
+		user_id: addFaceData.user_id,
+		image_path: addFaceData.image_path
+	})
+	.then(addFace_res => res.send(JSON.stringify(addFace_res)))
+	.catch(err => res.send(JSON.stringify(err)))
 })
 
-app.get('/get-face', (req, res) => {
-	// TODO
-})
-
-app.get('/get-faces', (req, res) => {
-	// TODO
+app.get('/get-faces/:user_id?', (req, res) => {
+	getFaces(connection, {
+		user_id: req.query.user_id
+	})
+	.then(getFaces_res => res.send(JSON.stringify(getFaces_res)))
+	.catch(err => res.send(JSON.stringify(err)))
 })
 
 // shouldn't ever need to update or delete faces...
 
 
 /************ TRANSACTIONS ***************/
-app.get('/add-transaction', (req, res) => {
-	// TODO
+app.post('/add-transaction', (req, res) => {
+	const addTransactionData = req.body
+
+	addTransaction(connection, {
+		user_id: addTransactionData.user_id,
+		data: addTransactionData.data
+	})
+	.then(addTransaction_res => res.send(JSON.stringify(addTransaction_res)))
+	.catch(err => res.send(JSON.stringify(err)))
 })
 
-app.get('/get-transaction', (req, res) => {
-	// TODO
-})
-
-app.get('/get-transactions', (req, res) => {
-	// TODO
+app.get('/get-transactions/:user_id?', (req, res) => {
+	getTransactions(connection, {
+		user_id: req.query.user_id
+	})
+	.then(getTransactions_res => res.send(JSON.stringify(getTransactions_res)))
+	.catch(err => res.send(JSON.stringify(err)))
 })
 
 // shouldn't ever need to update or delete transactions...
 
 /************ CUSTOMERS ***************/
-app.get('/add-customer', (req, res) => {
+app.post('/add-customer', (req, res) => {
+	const addCustomerData = req.body
+	addCustomer(connection, {
+		user_id: addCustomerData.user_id
+	})
+	.then(addCustomer_res => res.send(JSON.stringify(addCustomer_res)))
+	.catch(err => res.send(JSON.stringify(err)))
+})
+
+app.get('/get-customers/:user_id?', (req, res) => {
+	getCustomers(connection, {
+		user_id: req.query.user_id
+	})
+	.then(getCustomers_res => res.send(JSON.stringify(getCustomers_res)))
+	.catch(err => res.send(JSON.stringify(err)))
+})
+
+app.put('/update-customers', (req, res) => {
 	// TODO
 })
 
-app.get('/get-customer', (req, res) => {
-	// TODO
-})
-
-app.get('/get-customers', (req, res) => {
-	// TODO
-})
-
-app.get('/update-customers', (req, res) => {
-	// TODO
-})
-
-app.get('/delete-customers', (req, res) => {
-	// TODO
+app.delete('/delete-customers', (req, res) => {
+	const deleteCustomerData = req.body
+	deleteCustomer(connection, {
+		id: deleteCustomerData.id
+	})
+	.then(deleteCustomers_res => res.send(JSON.stringify(deleteCustomers_res)))
+	.catch(err => res.send(JSON.stringify(err)))
 })
 
 
