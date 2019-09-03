@@ -1,10 +1,26 @@
+const mysql = require('mysql')
+const dotenv = require('dotenv/config');
+
 const express = require('express')
+const bodyParser = require('body-parser')
+
 const app = express()
 const port = process.env.PORT || 3000
 
-const mysql = require('mysql')
 
-const dotenv = require('dotenv/config');
+// Disable CORS for now for easier development...
+// comment out before in production for security reasons
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*")
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+  next()
+})
+
+// I guess we need both of these middleware parsers to be able to 
+// see the body in a post request... OK
+app.use(bodyParser.urlencoded({ extended: true }))
+app.use(bodyParser.json())
+
 
 const {
 	addUser, 
@@ -48,17 +64,13 @@ app.get('/', (req, res) => {
 
 /********* USERS *************/
 app.post('/add-user', (req, res) => {
+	const addUserData = req.body
 	addUser(connection, {
-		index: 1, 
-		email: 'jmnanipenney22+test1@gmail.com', 
-		pass: '123'
+		email: addUserData.email, 
+		pass: addUserData.password
 	})
-	.then(addUserRes => {
-		getAllUsers(connection)
-			.then(rows => res.send(JSON.stringify({success: true, data: rows})))
-			.catch(err => res.send(JSON.stringify({success: false, error: err})))
-	})
-	.catch(err => res.send(JSON.stringify({success: false, error: err})))
+	.then(addUserRes => res.send(JSON.stringify({success:true, response: addUserRes})))
+	.catch(err => res.send(JSON.stringify({success:false, error: err})))
 })
 
 app.get('/get-user', (req, res) => {
@@ -79,7 +91,7 @@ app.post('/update-user', (req, res) => {
 	.catch(err => res.send(JSON.stringify({success: false, error: err})))
 })
 
-app.get('/delete-user', (req, res) => {
+app.post('/delete-user', (req, res) => {
 	// TODO
 })
 
