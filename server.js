@@ -65,6 +65,7 @@ app.get('/', (req, res) => {
 /********* USERS *************/
 app.post('/add-user', (req, res) => {
 	const addUserData = req.body
+	console.log('addUserData: ', addUserData)
 	addUser(connection, {
 		email: addUserData.email, 
 		pass: addUserData.password
@@ -73,11 +74,14 @@ app.post('/add-user', (req, res) => {
 	.catch(err => res.send(JSON.stringify({success:false, error: err})))
 })
 
-app.get('/get-user', (req, res) => {
-	getUser(connection, {
-		index: 1,
-	})
-	.then(res => res.send(JSON.stringify({success: true, data: res})))
+app.get('/get-user/:email?/:index?', (req, res) => {
+	const lookup = (
+		req.query.index ? {index: req.query.index}
+		: req.query.email ? {email: req.query.email}
+		: {index: 1}
+	)
+	getUser(connection, lookup)
+	.then(getUser_res => res.send(JSON.stringify({success: true, data: getUser_res})))
 	.catch(err => res.send(JSON.stringify({success: false, error: err})))
 })
 

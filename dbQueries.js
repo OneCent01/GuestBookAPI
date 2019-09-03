@@ -3,11 +3,13 @@ const {
 	executeQueries
 } = require('./connect.js')
 
+const mysql = require('mysql')
+
 
 const initGuestBookDatabase = (conn) => handleQuery(conn, `CREATE DATABASE GuestBook;`)
 
 const initGuestBookTables = (conn) => executeQueries(conn, [
-	'CREATE TABLE Users (id int not null auto_increment, email varchar(255), pass varchar(255), PRIMARY KEY(id));',
+	'CREATE TABLE Users (id int not null auto_increment unique, email varchar(255) unique, pass varchar(255), PRIMARY KEY(id));',
 	'CREATE TABLE Faces(id int  not null auto_increment,user_id int,image_path varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
 	'CREATE TABLE Customers(id int  not null auto_increment,user_id int,PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
 	'CREATE TABLE Transactions(id int not null auto_increment,user_id int,transaction_data varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
@@ -18,8 +20,16 @@ const initGuestBookTables = (conn) => executeQueries(conn, [
 
 const getAllUsers = (conn) => handleQuery(conn, `SELECT * FROM Users`)
 const addUser = (conn, opts) => handleQuery(conn, `INSERT INTO Users (email, pass) VALUES ("${opts.email}", "${opts.pass}")`)
-const getUser = (conn, opts) => handleQuery(conn, `SELECT * FROM Users WHERE id="${opts.index}"`)
-const updateUser = (conn, opts) => handleQuery(conn, `UPDATE Users SET email="${opts.email}",  pass="${opts.pass}" WHERE id="${opts.index}"`)
+const getUser = (conn, opts) => {
+	let selectQuery = 'SELECT * FROM ?? WHERE ?? = ?'
+    let query = mysql.format(selectQuery, [
+    	'Users', 
+    	(opts.email ? 'email' : 'id'), 
+    	(opts.email ? opts.email : opts.index)
+    ])
+	return handleQuery(conn, query)
+}
+const updateUser = (conn, opts) => handleQuery(conn, `UPDATE Users SET email="${opts.email}",  pass="${opts.pass}" WHERE id="${opts.index}";`)
 
 
 module.exports = { 
