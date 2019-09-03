@@ -57,21 +57,21 @@ initAndCreatDbIfNone(connection, connectionOps)
 /********** ROOT **************/
 app.get('/', (req, res) => {
 	getAllUsers(connection)
-		.then(rows => res.send(JSON.stringify({success: true, data: rows})))
-		.catch(err => res.send(JSON.stringify({success: false, error: err})))
+		.then(rows => res.send(JSON.stringify(rows)))
+		.catch(err => res.send(JSON.stringify(err)))
 })
 
 
 /********* USERS *************/
 app.post('/add-user', (req, res) => {
 	const addUserData = req.body
-	console.log('addUserData: ', addUserData)
+
 	addUser(connection, {
 		email: addUserData.email, 
 		pass: addUserData.password
 	})
-	.then(addUserRes => res.send(JSON.stringify({success:true, response: addUserRes})))
-	.catch(err => res.send(JSON.stringify({success:false, error: err})))
+	.then(addUserRes => res.send(JSON.stringify(addUserRes)))
+	.catch(err => res.send(JSON.stringify(err)))
 })
 
 app.get('/get-user/:email?/:index?', (req, res) => {
@@ -80,9 +80,10 @@ app.get('/get-user/:email?/:index?', (req, res) => {
 		: req.query.email ? {email: req.query.email}
 		: {index: 1}
 	)
+
 	getUser(connection, lookup)
-	.then(getUser_res => res.send(JSON.stringify({success: true, data: getUser_res})))
-	.catch(err => res.send(JSON.stringify({success: false, error: err})))
+	.then(getUser_res => res.send(JSON.stringify(getUser_res)))
+	.catch(err => res.send(JSON.stringify(err)))
 })
 
 app.post('/update-user', (req, res) => {
