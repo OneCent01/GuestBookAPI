@@ -47,9 +47,17 @@ const getAllUsers = (conn) => handleQuery(conn, `SELECT * FROM Users`)
 
 const addUser = (conn, opts) => handleQuery(conn, `INSERT INTO Users (id, email, pass) VALUES (${opts.index}, "${opts.email}", "${opts.pass}")`)
 
+const getUser = (conn, opts) => handleQuery(conn, `SELECT * FROM Users WHERE id="${opts.index}"`)
+
+const updateUser = (conn, opts) => handleQuery(conn, `UPDATE Users SET email="${opts.email}",  pass="${opts.pass}" WHERE id="${opts.index}"`)
+
+
+
 module.exports = { 
 	initGuestBookTables, 
 	initGuestBookDatabase,
 	getAllUsers, 
-	addUser
+	addUser,
+    getUser,
+    updateUser
 }
