@@ -4,11 +4,13 @@ const port = process.env.PORT || 3000;
 
 const mysql = require('mysql')
 
+const dotenv = require('dotenv/config');
 
 const {
 	addUser, 
 	getAllUsers,
-	getUser
+    getUser,
+    updateUser
 } = require('./dbQueries.js')
 
 const {
@@ -18,14 +20,14 @@ const {
 // these options here are what we change to configure connections to 
 // mySQL databases, including external ones
 const connectionOps = {
-	host: 'localhost',
-	user: 'root',
-	password: '123456'
+	host: process.env.DB_HOST,
+	user: process.env.DB_USER,
+	password: process.env.DB_PASSWORD
 }
 
 let connection = mysql.createConnection({
 	...connectionOps,
-	database: 'guestbook'
+	database: process.env.DB_DATABASE
 })
 
 initAndCreatDbIfNone(connection, connectionOps)
@@ -57,7 +59,7 @@ app.get('/add-user', (req, res) => {
 
 app.get('/get-user', (req, res) => {
 	getUser(connection, {
-		index: 69833,
+		index: 1,
 	})
 	.then(res => {
 		console.log(res);
@@ -66,7 +68,15 @@ app.get('/get-user', (req, res) => {
 })
 
 app.get('/update-user', (req, res) => {
-	// TODO
+	updateUser(connection, {
+        index: 1,
+        email: 'jmnanipenney22+test1@gmail.com',
+		pass: '456'
+	})
+	.then(res => {
+		console.log(res);
+	})
+	.catch(err => console.log('Failed to add user: ', err))
 })
 
 app.get('/delete-user', (req, res) => {
