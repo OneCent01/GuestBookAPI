@@ -3,6 +3,22 @@ const {
 	executeQueries
 } = require('./connect.js')
 
+/**
+ * Summary. 
+ *   Returns a promise, creates the database then resolves
+ *
+ * Description. 
+ *   Returns a promise that executes a query  
+ *   creating the GuestBook database then resolves
+ *   after the response 
+ *
+ * @conn {let:Object} 
+ *   mysql connection object
+ *
+ * @return {Promise} 
+ *   if query was successful, resolve the response;
+ *   otherwise, reject with the error.
+ */
 const initGuestBookDatabase = (conn) => new Promise(async (resolve, reject) => {
 	handleQuery(conn, `CREATE DATABASE GuestBook;`)
 	.then(res => resolve(res))

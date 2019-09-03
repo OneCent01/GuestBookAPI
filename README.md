@@ -69,6 +69,19 @@ Node can be easily installed with homebrew on a Mac with `brew install node`
 `git push heroku master`
 7. In a browser, open the application at the assigned endpoint (you'll see it in the terminal after the previous command)
 
-An already deployed instance can be found here: 
+A deployed heroku instance of this app can be found here: 
 https://limitless-bayou-46474.herokuapp.com/
 
+## Function documentation comment template: 
+/**
+ * Summary. (use period)
+ *
+ * Description. (use period)
+ *
+ * @param {let: type}   Description.
+ * @param {[let: type]}   Description of optional variable.
+ * @param {[let: type]=defaultValue}   Description of optional variable with default variable.
+ * @param {let.key: type}   Description of a key in the objectVar parameter.
+ *
+ * @return {type} Return value description.
+ */

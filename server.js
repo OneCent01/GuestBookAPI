@@ -1,6 +1,6 @@
 const express = require('express')
 const app = express()
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000
 
 const mysql = require('mysql')
 
@@ -22,12 +22,17 @@ const connectionOps = {
 	password: '123456'
 }
 
+// INITIALIZE CONNECTION OPTS, MAY NEED TO CHANGE IF 
+// GUESTBOOK ISN'T CURRENTLY A DB IN THE MYSQL DB
 let connection = mysql.createConnection({
 	...connectionOps,
 	database: 'guestbook'
 })
 
+// DATABASE CONNECTION INITIALIZATION
 initAndCreatDbIfNone(connection, connectionOps)
+.then(() => console.log('Connected...'))
+.catch(err => console.log(`initAndCreatDbIfNone error: ${err}`))
 
 
 /********** ROOT **************/
@@ -39,19 +44,18 @@ app.get('/', (req, res) => {
 
 
 /********* USERS *************/
-app.get('/add-user', (req, res) => {
+app.post('/add-user', (req, res) => {
 	addUser(connection, {
-		index: 1, 
+		index: 4, 
 		email: 'jmpenney22+test1@gmail.com', 
 		pass: '123'
 	})
-	.then(res => {
-		console.log('Success! User added.')
+	.then(addUserRes => {
 		getAllUsers(connection)
-			.then(rows => console.log('user rows: ', rows))
-			.catch(err => console.log('Failed to retrieve all users: ', err))
+			.then(rows => res.send(JSON.stringify({success: true, data: rows})))
+			.catch(err => res.send(JSON.stringify({success: false, error: err})))
 	})
-	.catch(err => console.log('Failed to add user: ', err))
+	.catch(err => res.send(JSON.stringify({success: false, error: err})))
 })
 
 app.get('/get-user', (req, res) => {
