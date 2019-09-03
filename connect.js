@@ -1,4 +1,3 @@
-
 const initConnection = (conn) => new Promise((resolve, reject) => {
 	conn.connect(err => {
 		if(err) {
@@ -21,16 +20,23 @@ const handleQuery = (conn, query) => new Promise((resolve, reject) => {
 	})
 })
 
-const executeQueries = (conn, queries, cb, i=0) => {
+const handleQueries = (conn, queries, cb, i=0, responses=[]) => {
 	return handleQuery(conn, queries[i])
 		.then(res => (
 			i < queries.length-1 
-				? executeQueries(conn, queries, cb, i+1) 
-				: cb(true)
+				? handleQueries(conn, queries, cb, i+1, [...responses, res]) 
+				: cb(true, responses)
 		))
 		.catch(err => cb(false, err))
 }
 
+const executeQueries = (conn, queries) => new Promise((resolve, reject) => {
+	handleQueries(
+		conn,
+		queries,
+		(success, res) => success ? resolve(res) : reject(res)
+	)
+})
 
 module.exports = { 
 	initConnection, 

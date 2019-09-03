@@ -3,54 +3,23 @@ const {
 	executeQueries
 } = require('./connect.js')
 
-/**
- * Summary. 
- *   Returns a promise, creates the database then resolves
- *
- * Description. 
- *   Returns a promise that executes a query  
- *   creating the GuestBook database then resolves
- *   after the response 
- *
- * @conn {let:Object} 
- *   mysql connection object
- *
- * @return {Promise} 
- *   if query was successful, resolve the response;
- *   otherwise, reject with the error.
- */
-const initGuestBookDatabase = (conn) => new Promise(async (resolve, reject) => {
-	handleQuery(conn, `CREATE DATABASE GuestBook;`)
-	.then(res => resolve(res))
-	.catch(err => reject(err))
-}) 
 
-const initGuestBookTables = (conn) => new Promise((resolve, reject) => {
-	const queries = [
-		'CREATE TABLE Users (id int, email varchar(255), pass varchar(255), PRIMARY KEY(id));',
-		'CREATE TABLE Faces(id int,user_id int,image_path varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
-		'CREATE TABLE Customers(id int,user_id int,PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
-		'CREATE TABLE Transactions(id int,user_id int,transaction_data varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
-		'CREATE TABLE CustomerFaces(id int,face_id int,customer_id varchar(255),PRIMARY KEY(id),FOREIGN KEY(face_id) REFERENCES Faces(id));',
-		'CREATE TABLE CustomerData(id int,customer_id int,user_data text,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id));',
-		'CREATE TABLE CustomerTransactions(id int,customer_id int,transaction_id int,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id),FOREIGN KEY(transaction_id) REFERENCES Transactions(id));'
-	]
+const initGuestBookDatabase = (conn) => handleQuery(conn, `CREATE DATABASE GuestBook;`)
 
-	executeQueries(
-		conn, 
-		queries, 
-		(success, err) => success ? resolve() : reject(err)
-	)
-})
+const initGuestBookTables = (conn) => executeQueries(conn, [
+	'CREATE TABLE Users (id int, email varchar(255), pass varchar(255), PRIMARY KEY(id));',
+	'CREATE TABLE Faces(id int,user_id int,image_path varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
+	'CREATE TABLE Customers(id int,user_id int,PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
+	'CREATE TABLE Transactions(id int,user_id int,transaction_data varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
+	'CREATE TABLE CustomerFaces(id int,face_id int,customer_id varchar(255),PRIMARY KEY(id),FOREIGN KEY(face_id) REFERENCES Faces(id));',
+	'CREATE TABLE CustomerData(id int,customer_id int,user_data text,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id));',
+	'CREATE TABLE CustomerTransactions(id int,customer_id int,transaction_id int,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id),FOREIGN KEY(transaction_id) REFERENCES Transactions(id));'
+])
 
 const getAllUsers = (conn) => handleQuery(conn, `SELECT * FROM Users`)
-
 const addUser = (conn, opts) => handleQuery(conn, `INSERT INTO Users (id, email, pass) VALUES (${opts.index}, "${opts.email}", "${opts.pass}")`)
-
 const getUser = (conn, opts) => handleQuery(conn, `SELECT * FROM Users WHERE id="${opts.index}"`)
-
 const updateUser = (conn, opts) => handleQuery(conn, `UPDATE Users SET email="${opts.email}",  pass="${opts.pass}" WHERE id="${opts.index}"`)
-
 
 
 module.exports = { 
@@ -58,6 +27,6 @@ module.exports = {
 	initGuestBookDatabase,
 	getAllUsers, 
 	addUser,
-    getUser,
-    updateUser
+	getUser,
+	updateUser
 }
