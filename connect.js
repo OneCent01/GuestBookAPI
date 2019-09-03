@@ -24,7 +24,7 @@ const executeQueries = (conn, queries, cb, i=0) => {
 	return handleQuery(conn, queries[i])
 		.then(res => (
 			i < queries.length-1 
-				? executeQuries(conn, queries, cb, i+1) 
+				? executeQueries(conn, queries, cb, i+1) 
 				: cb(true)
 		))
 		.catch(err => cb(false, err))

@@ -7,7 +7,8 @@ const mysql = require('mysql')
 
 const {
 	addUser, 
-	getAllUsers
+	getAllUsers,
+	getUser
 } = require('./dbQueries.js')
 
 const {
@@ -42,7 +43,7 @@ app.get('/', (req, res) => {
 app.get('/add-user', (req, res) => {
 	addUser(connection, {
 		index: 1, 
-		email: 'jmpenney22+test1@gmail.com', 
+		email: 'jmnanipenney22+test1@gmail.com', 
 		pass: '123'
 	})
 	.then(res => {
@@ -55,7 +56,13 @@ app.get('/add-user', (req, res) => {
 })
 
 app.get('/get-user', (req, res) => {
-	// TODO
+	getUser(connection, {
+		index: 69833,
+	})
+	.then(res => {
+		console.log(res);
+	})
+	.catch(err => console.log('Failed to add user: ', err))
 })
 
 app.get('/update-user', (req, res) => {
