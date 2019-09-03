@@ -41,8 +41,8 @@ initAndCreatDbIfNone(connection, connectionOps)
 /********** ROOT **************/
 app.get('/', (req, res) => {
 	getAllUsers(connection)
-		.then(rows => res.send(`All users: ${JSON.stringify(rows)}`))
-		.catch(err => res.send(`Failed to retrieve all users: ${err}`))
+		.then(rows => res.send(JSON.stringify({success: true, data: rows})))
+		.catch(err => res.send(JSON.stringify({success: false, error: err})))
 })
 
 
@@ -65,22 +65,18 @@ app.get('/get-user', (req, res) => {
 	getUser(connection, {
 		index: 1,
 	})
-	.then(res => {
-		console.log(res);
-	})
-	.catch(err => console.log('Failed to add user: ', err))
+	.then(res => res.send(JSON.stringify({success: true, data: res})))
+	.catch(err => res.send(JSON.stringify({success: false, error: err})))
 })
 
-app.get('/update-user', (req, res) => {
+app.post('/update-user', (req, res) => {
 	updateUser(connection, {
         index: 1,
         email: 'jmnanipenney22+test1@gmail.com',
 		pass: '456'
 	})
-	.then(res => {
-		console.log(res);
-	})
-	.catch(err => console.log('Failed to add user: ', err))
+	.then(res => res.send(JSON.stringify({success: true, data: res})))
+	.catch(err => res.send(JSON.stringify({success: false, error: err})))
 })
 
 app.get('/delete-user', (req, res) => {
