@@ -10,7 +10,7 @@ const port = process.env.PORT || 3000
 
 // Disable CORS for now for easier development...
 // comment out before in production for security reasons
-app.use(function(req, res, next) {
+app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*")
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
   next()
@@ -20,7 +20,6 @@ app.use(function(req, res, next) {
 // see the body in a post request... OK
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
-
 
 const {
 	addUser, 
@@ -34,7 +33,15 @@ const {
 	getTransactions,
 	addCustomer,
 	getCustomers,
-	deleteCustomer
+	deleteCustomer,
+	addProduct,
+	getProducts,
+	updateProduct,
+	deleteProduct,
+	addUserProduct,
+	getUserProducts,
+	updateUserProduct,
+	deleteUserProduct
 } = require('./dbQueries.js')
 
 const {
@@ -61,80 +68,72 @@ initAndCreatDbIfNone(connection, connectionOps)
 .then(() => console.log('Connected...'))
 .catch(err => console.log(`initAndCreatDbIfNone error: ${err}`))
 
+const exexuteDbQueryAndForwardRes = (res, queryFn, opts) => {
+	queryFn(connection, opts)
+		.then(queryRes => res.send(JSON.stringify(queryRes)))
+		.catch(err => res.send(JSON.stringify(err)))
+}
 
 /********** ROOT **************/
-app.get('/', (req, res) => {
-	getAllUsers(connection)
-		.then(getAllUsers_res => res.send(JSON.stringify(getAllUsers_res)))
-		.catch(err => res.send(JSON.stringify(err)))
-})
+app.get('/', (req, res) => res.send('OK'))
 
 
 /********* USERS *************/
 app.post('/add-user', (req, res) => {
-	const addUserData = req.body
-
-	addUser(connection, {
-		email: addUserData.email, 
-		pass: addUserData.password
-	})
-	.then(addUserRes => res.send(JSON.stringify(addUserRes)))
-	.catch(err => res.send(JSON.stringify(err)))
+	const reqData = req.body
+	const opts = {
+		email: reqData.email, 
+		pass: reqData.password
+	}
+	exexuteDbQueryAndForwardRes(res, addUser, opts)
 })
 
 app.get('/get-user/:email?/:id?', (req, res) => {
-	const lookup = (
+	const opts = (
 		req.query.id ? {id: req.query.id}
 		: req.query.email ? {email: req.query.email}
 		: {id: 1}
 	)
-
-	getUser(connection, lookup)
-	.then(getUser_res => res.send(JSON.stringify(getUser_res)))
-	.catch(err => res.send(JSON.stringify(err)))
+	exexuteDbQueryAndForwardRes(res, getUser, opts)
 })
 
 app.put('/update-user', (req, res) => {
-	const updateUserData = req.body
-	updateUser(connection, {
-        id: updateUserData.id,
-        email: updateUserData.email,
-		pass: updateUserData.password
-	})
-	.then(updateUser_res => res.send(JSON.stringify(updateUser_res)))
-	.catch(err => res.send(JSON.stringify(err)))
+	const reqData = req.body
+	const opts = {
+        id: reqData.id,
+        email: reqData.email,
+		pass: reqData.password
+	}
+	exexuteDbQueryAndForwardRes(res, updateUser, opts)
 })
 
 app.delete('/delete-user', (req, res) => {
-	const deleteUserData = req.body
+	const reqData = req.body
+	const opts = {
+		id: reqData.id
+	}
+
 	// should add a validation step where the password needs to be sent in 
 	// and compared against that stored in the database
-	deleteUser(connection, {
-		id: deleteUserData.id
-	})
-	.then(deleteUser_res => res.send(JSON.stringify(deleteUser_res)))
-	.catch(err => res.send(JSON.stringify(err)))
+	exexuteDbQueryAndForwardRes(res, deleteUser, opts)
 })
 
 
 /************ FACES ***************/
 app.post('/add-face', (req, res) => {
-	const addFaceData = req.body
-
-	addFace(connection, {
-		user_id: addFaceData.user_id,
-		image_path: addFaceData.image_path
-	})
-	.then(addFace_res => res.send(JSON.stringify(addFace_res)))
-	.catch(err => res.send(JSON.stringify(err)))
+	const reqData = req.body
+	const opts = {
+		user_id: reqData.user_id,
+		image_path: reqData.image_path
+	}
+	exexuteDbQueryAndForwardRes(res, addFace, opts)
 })
 
 app.get('/get-faces/:user_id?', (req, res) => {
-	getFaces(connection, {
+	const opts = {
 		user_id: req.query.user_id
-	})
-	.then(getFaces_res => res.send(JSON.stringify(getFaces_res)))
-	.catch(err => res.send(JSON.stringify(err)))
+	}
+	exexuteDbQueryAndForwardRes(res, getFaces, opts)
 })
 
 // shouldn't ever need to update or delete faces...
@@ -142,42 +141,37 @@ app.get('/get-faces/:user_id?', (req, res) => {
 
 /************ TRANSACTIONS ***************/
 app.post('/add-transaction', (req, res) => {
-	const addTransactionData = req.body
-
-	addTransaction(connection, {
-		user_id: addTransactionData.user_id,
-		data: addTransactionData.data
-	})
-	.then(addTransaction_res => res.send(JSON.stringify(addTransaction_res)))
-	.catch(err => res.send(JSON.stringify(err)))
+	const reqData = req.body
+	const opts = {
+		user_id: reqData.user_id,
+		data: reqData.data
+	}
+	exexuteDbQueryAndForwardRes(res, getFaces, opts)
 })
 
 app.get('/get-transactions/:user_id?', (req, res) => {
-	getTransactions(connection, {
+	const opts = {
 		user_id: req.query.user_id
-	})
-	.then(getTransactions_res => res.send(JSON.stringify(getTransactions_res)))
-	.catch(err => res.send(JSON.stringify(err)))
+	}
+	exexuteDbQueryAndForwardRes(res, getTransactions, opts)
 })
 
 // shouldn't ever need to update or delete transactions...
 
 /************ CUSTOMERS ***************/
 app.post('/add-customer', (req, res) => {
-	const addCustomerData = req.body
-	addCustomer(connection, {
-		user_id: addCustomerData.user_id
-	})
-	.then(addCustomer_res => res.send(JSON.stringify(addCustomer_res)))
-	.catch(err => res.send(JSON.stringify(err)))
+	const reqData = req.body
+	const opts = {
+		user_id: reqData.user_id
+	}
+	exexuteDbQueryAndForwardRes(res, addCustomer, opts)
 })
 
 app.get('/get-customers/:user_id?', (req, res) => {
-	getCustomers(connection, {
+	const opts = {
 		user_id: req.query.user_id
-	})
-	.then(getCustomers_res => res.send(JSON.stringify(getCustomers_res)))
-	.catch(err => res.send(JSON.stringify(err)))
+	}
+	exexuteDbQueryAndForwardRes(res, getCustomers, opts)
 })
 
 app.put('/update-customers', (req, res) => {
@@ -185,14 +179,88 @@ app.put('/update-customers', (req, res) => {
 })
 
 app.delete('/delete-customers', (req, res) => {
-	const deleteCustomerData = req.body
-	deleteCustomer(connection, {
-		id: deleteCustomerData.id
-	})
-	.then(deleteCustomers_res => res.send(JSON.stringify(deleteCustomers_res)))
-	.catch(err => res.send(JSON.stringify(err)))
+	const reqData = req.body
+	const opts = {
+		id: reqData.id
+	}
+	exexuteDbQueryAndForwardRes(res, deleteCustomer, opts)
 })
 
+
+/************ PRODUCTS ****************/
+app.post('/add-product', (req, res) => {
+	const reqData = req.body
+	const opts = {
+		category: reqData.category,
+		barcode: reqData.barcode,
+		desc: reqData.description,
+		img_urls: reqData.img_urls,
+		price_data: reqData.price_data
+	}
+	exexuteDbQueryAndForwardRes(res, addProduct, opts)
+})
+
+app.get('/get-product/:ids?', (req, res) => {
+	const opts = {
+		product_ids: req.query.ids.split('|')
+	}
+	exexuteDbQueryAndForwardRes(res, getProducts, opts)
+})
+
+app.put('/update-product', (req, res) => {
+	const reqData = req.body
+	const opts = {
+		product_id: reqData.product_id,
+		attrs: reqData.attrs
+	}
+	exexuteDbQueryAndForwardRes(res, updateProduct, opts)
+})
+
+app.delete('/delete-product', (req, res) => {
+	const reqData = req.body
+	const opts = {
+		product_id: reqData.product_id
+	}
+	exexuteDbQueryAndForwardRes(res, deleteProduct, opts)
+})
+
+
+/********** USER PRODUCTS *************/
+app.post('/add-user-product', (req, res) => {
+	const reqData = req.body
+	const opts = {
+		user_id: reqData.user_id,
+		product_id: reqData.product_id,
+		stock: reqData.stock,
+		price: reqData.price,
+		history: reqData.history
+	}
+	exexuteDbQueryAndForwardRes(res, addUserProduct, opts)
+})
+
+app.get('/get-user-products/:user_id?', (req, res) => {
+	const opts = {
+		user_id: req.query.user_id
+	}
+	exexuteDbQueryAndForwardRes(res, getUserProducts, opts)
+})
+
+app.put('/update-user-product', (req, res) => {
+	const reqData = req.body
+	const opts = {
+		user_product_id: reqData.user_product_id,
+		attrs: reqData.attrs
+	}
+	exexuteDbQueryAndForwardRes(res, updateUserProduct, opts)
+})
+
+app.delete('/delete-user-product', (req, res) => {
+	const reqData = req.body
+	const opts = {
+		user_product_id: reqData.user_product_id
+	}
+	exexuteDbQueryAndForwardRes(res, deleteUserProduct, opts)
+})
 
 
 /*********** START THE SERVER ************/
