@@ -16,7 +16,7 @@ const initAndCreatDbIfNone = (connection, opts, db) => new Promise((resolve, rej
 	initConnection(connection)
 	.then(() => {
 		console.log('GuestBook DB exists, connected...')
-		resolve()
+		resolve(connection)
 	})
 	.catch(err => {
 		if(err && err.error.code === 'ER_BAD_DB_ERROR') {
