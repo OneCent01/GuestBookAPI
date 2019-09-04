@@ -5,19 +5,18 @@ const {
 
 const mysql = require('mysql')
 
-
+/*TABLES*/
 const initGuestBookDatabase = (conn) => handleQuery(conn, `CREATE DATABASE GuestBook;`)
-
 const initGuestBookTables = (conn) => executeQueries(conn, [
-	'CREATE TABLE Users (id int not null auto_increment unique, email varchar(255) unique, pass varchar(255), PRIMARY KEY(id));',
+	'CREATE TABLE Users(id int not null auto_increment unique, email varchar(255) unique, pass text, PRIMARY KEY(id));',
 	'CREATE TABLE Faces(id int not null auto_increment,user_id int,image_path varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
 	'CREATE TABLE Customers(id int  not null auto_increment,user_id int,PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
 	'CREATE TABLE Transactions(id int not null auto_increment,user_id int,transaction_data varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
 	'CREATE TABLE CustomerFaces(id int not null auto_increment,face_id int,customer_id varchar(255),PRIMARY KEY(id),FOREIGN KEY(face_id) REFERENCES Faces(id));',
 	'CREATE TABLE CustomerData(id int not null auto_increment,customer_id int,user_data text,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id));',
 	'CREATE TABLE CustomerTransactions(id int not null auto_increment,customer_id int,transaction_id int,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id),FOREIGN KEY(transaction_id) REFERENCES Transactions(id));',
-	'CREATE TABLE Products(id int not null auto_increment, name varchar(255), category varchar (255), barcode int, desc varchar(255), img_urls varchar(255), price_data varchar(255), PRIMARY KEY(id));',
-	'CREATE TABLE UserProducts(id int not null auto_increment, user_id int not null, product_id int not null, stock int, price decimal, history varchar(255), PRIMARY KEY(id), FOREIGN KEY(user_id) REFERENCES Products(id));'
+	'CREATE TABLE Products(id int not null auto_increment,name varchar(255),category varchar(255),barcode int,description varchar(255),img_urls varchar(255),price_data varchar(255),PRIMARY KEY(id));',
+	'CREATE TABLE UserProducts(id int not null auto_increment,user_id int not null,product_id int not null,stock int,price decimal,history varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Products(id));'
 ])
 
 /*USERS*/
@@ -33,7 +32,8 @@ const getFaces = (conn, opts) => handleQuery(conn, `SELECT * FROM Faces WHERE us
 
 /*TRANSACTIONS*/
 const addTransaction = (conn, opts) => handleQuery(conn, `INSERT INTO Transactions (user_id, transaction_data) VALUES ("${opts.user_id}", "${opts.data}")`)
-const getTransactions = (conn, opts) => handleQuery(conn, `SELECT * FROM Faces WHERE user_id="${opts.user_id}"`)
+const getTransactions = (conn, opts) => handleQuery(conn, `SELECT * FROM Transactions WHERE user_id="${opts.user_id}"`)
+const deleteTransaction = (conn, opts) => handleQuery(conn, `DELETE FROM Transactions WHERE id="${opts.id}"`)
 
 /*CUSTOMERS*/
 const addCustomer = (conn, opts) => handleQuery(conn, `INSERT INTO Customers (user_id) VALUES ("${opts.user_id}")`)
@@ -42,26 +42,10 @@ const getCustomers = (conn, opts) => handleQuery(conn, `SELECT * FROM Customers 
 const deleteCustomer = (conn, opts) => handleQuery(conn, `DELETE FROM Customers WHERE id="${opts.id}"`)
 
 /*PRODUCTS*/
-const addProduct = (conn, opts) => handleQuery(conn, `INSERT INTO Products (category, barcode, desc, img_urls, price_data) VALUES ("${opts.category}", "${opts.barcode}", "${opts.desc}", "${opts.img_urls}", "${opts.price_data}");`)
+const addProduct = (conn, opts) => handleQuery(conn, `INSERT INTO Products (category, barcode, description, img_urls, price_data) VALUES ("${opts.category}", "${opts.barcode}", "${opts.description}", "${opts.img_urls}", "${opts.price_data}");`)
 const getProducts = (conn, opts) => handleQuery(conn, `SELECT * FROM Products WHERE id in (${
-	// reduce the ids array into a string that SQL will accept as a set:
 	opts.product_ids.reduce((final, id, i) => i ? `${final}, "${id}"` : `"${id}"`, '')
 })`)
-
-/* 
-otps={
-	product_id: NUMBER,
-	attrs: [
-		{
-			key: 'price_data',
-			value: data
-		},
-		.
-		.
-		.
-	]
-}
-*/
 const updateProduct = (conn, opts) => handleQuery(conn, `UPDATE Products SET ${
 	opts.attrs.reduce((final, attr, i) => i ? `${final}, ${attr.key}="${attr.value}"` : `${attr.key}="${attr.value}"`, '')
 } WHERE id="${opts.product_id}"`)
@@ -87,6 +71,7 @@ module.exports = {
 	getFaces,
 	addTransaction,
 	getTransactions,
+	deleteTransaction,
 	addCustomer,
 	getCustomers,
 	deleteCustomer,

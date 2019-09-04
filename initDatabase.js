@@ -12,7 +12,7 @@ const {
 
 // attempt to establish connection toa specific database in mySQL,
 // if it's not there, make it, then try connecting to it again
-const initAndCreatDbIfNone = (connection, opts) => new Promise((resolve, reject) => {
+const initAndCreatDbIfNone = (connection, opts, db) => new Promise((resolve, reject) => {
 	initConnection(connection)
 	.then(() => {
 		console.log('GuestBook DB exists, connected...')
@@ -24,31 +24,32 @@ const initAndCreatDbIfNone = (connection, opts) => new Promise((resolve, reject)
 			// exist.. make it, then re-establish the connection with the db
 			connection = mysql.createConnection({ ...opts });
 			initConnection(connection)
-				.then((res) => {
+				.then(() => {
 					initGuestBookDatabase(connection)
-					.then(res => {
+					.then(() => {
 						console.log('GuestBook DB created; re-establishing connection to DB...')
 						killConnection(connection)
-						.then((killRes) => {
+						.then(() => {
 							connection = mysql.createConnection({
 								...opts,
-								database: 'guestbook'
+								database: db
 							})
 							initConnection(connection)
 							.then(() => {
-								console.log('GuestBook DB created and connection re-established successfully....')
+								console.log('GuestBook DB created, connection re-established....')
 								initGuestBookTables(connection)
-									.then(() => {
-										console.log('tables successfully created!')
-										resolve()
-									})
-									.catch(err => {
-										console.log('init tables error: ', err)
-										reject(err)
-									})
+								.then(() => {
+									console.log('tables successfully created...')
+									resolve(connection)
+									
+								})
+								.catch(err => {
+									console.log('init tables error: ', err)
+									reject(err)
+								})
 							})
 							.catch(err => {
-								console.log('Unable to connect to newly creted DB...: ', err)
+								console.log('Unable to connect to newly creted DB...')
 								reject(err)
 							})
 						})
@@ -63,7 +64,7 @@ const initAndCreatDbIfNone = (connection, opts) => new Promise((resolve, reject)
 					reject(err)
 				})
 		} else {
-			console.log('Unknown error has occurred attepting to connect to mySQL: ', err)
+			console.log('Unknown error has occurred attepting to connect to mySQL')
 			reject(err)
 		}
 	})

@@ -31,6 +31,7 @@ const {
 	getFaces,
 	addTransaction,
 	getTransactions,
+	deleteTransaction,
 	addCustomer,
 	getCustomers,
 	deleteCustomer,
@@ -58,15 +59,18 @@ const connectionOps = {
 
 // INITIALIZE CONNECTION OPTS, MAY NEED TO CHANGE IF 
 // GUESTBOOK ISN'T CURRENTLY A DB IN THE MYSQL DB
+const dataBase = process.env.DB_DATABASE
 let connection = mysql.createConnection({
 	...connectionOps,
 	database: process.env.DB_DATABASE
 })
 
 // DATABASE CONNECTION INITIALIZATION
-initAndCreatDbIfNone(connection, connectionOps)
-.then(() => console.log('Connected...'))
-.catch(err => console.log(`initAndCreatDbIfNone error: ${err}`))
+initAndCreatDbIfNone(connection, connectionOps, dataBase)
+.then((conn) => {
+	connection = conn
+})
+.catch(err => {})
 
 const exexuteDbQueryAndForwardRes = (res, queryFn, opts) => {
 	queryFn(connection, opts)
@@ -154,6 +158,14 @@ app.get('/get-transactions/:user_id?', (req, res) => {
 		user_id: req.query.user_id
 	}
 	exexuteDbQueryAndForwardRes(res, getTransactions, opts)
+})
+
+app.delete('/delete-transaction', (req, res) => {
+	const reqData = req.body
+	const opts = {
+		id: reqData.transaction_id
+	}
+	exexuteDbQueryAndForwardRes(res, deleteTransaction, opts)
 })
 
 // shouldn't ever need to update or delete transactions...

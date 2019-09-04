@@ -8,7 +8,7 @@ const initConnection = (conn) => new Promise((resolve, reject) => {
 	})
 })
 
-const killConnection = (conn) => new Promise((resolve, reject) => conn.end(err => resolve(err)))
+const killConnection = (conn) => new Promise((resolve, reject) => conn.end(resolve))
 
 const handleQuery = (conn, query) => new Promise((resolve, reject) => {
 	conn.query(query, (err, rows) => (
