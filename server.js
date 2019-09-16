@@ -7,6 +7,22 @@ const bodyParser = require('body-parser')
 const app = express()
 const port = process.env.PORT || 3000
 
+const crypto = require('crypto')
+const secureRandomInt = (length) => new Promise((resolve, reject) => {
+	crypto.randomBytes(Math.ceil(length/2), (err, buff) => {
+		if(err !== null) {
+			reject(err)
+		} else {
+			const randInt = parseInt(buff.toString('hex'), 16)
+			resolve(+randInt.toString().slice(0, length))
+		}
+	})
+})
+
+const argon2 = require('argon2')
+const hash = (saltedPass) => new Promise(async (resolve, reject) => resolve(await argon2.hash(saltedPass)))
+const verify = (saltedPass, hash) => new Promise(async (resolve, reject) => resolve(await argon2.verify(hash, saltedPass)))
+
 
 // Disable CORS for now for easier development...
 // comment out before in production for security reasons
@@ -79,17 +95,38 @@ const exexuteDbQueryAndForwardRes = (res, queryFn, opts) => {
 }
 
 /********** ROOT **************/
-app.get('/', (req, res) => res.send('OK'))
+app.get('/', async (req, res) => res.send('OK'))
 
 
 /********* USERS *************/
-app.post('/add-user', (req, res) => {
+app.post('/add-user', async (req, res) => {
 	const reqData = req.body
+
+	const salt = await secureRandomInt(16)
+
+	const hashed = await hash(`${salt}${reqData.password}`)
+	
 	const opts = {
 		email: reqData.email, 
-		pass: reqData.password
+		salt: salt,
+		hash: hashed
 	}
 	exexuteDbQueryAndForwardRes(res, addUser, opts)
+})
+
+app.post('/auth-user', async (req, res) => {
+	const reqData = req.body
+
+	const userRes = await getUser(connection, {email: reqData.email})
+	const user = userRes.data[0]
+	const verified = await verify(`${user.salt}${reqData.password}`, user.hash)
+
+	if(verified) {
+		res.send(JSON.stringify({success: true}))
+	} else {
+		res.send(JSON.stringify({success: false}))
+	}
+
 })
 
 app.get('/get-user/:email?/:id?', (req, res) => {

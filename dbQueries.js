@@ -8,7 +8,7 @@ const mysql = require('mysql')
 /*TABLES*/
 const initGuestBookDatabase = (conn) => handleQuery(conn, `CREATE DATABASE GuestBook;`)
 const initGuestBookTables = (conn) => executeQueries(conn, [
-	'CREATE TABLE Users(id int not null auto_increment unique, email varchar(255) unique, pass text, PRIMARY KEY(id));',
+	'CREATE TABLE Users(id int not null auto_increment unique, email varchar(255) unique, hash text, salt varchar(255), PRIMARY KEY(id));',
 	'CREATE TABLE Faces(id int not null auto_increment,user_id int,image_path varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
 	'CREATE TABLE Customers(id int  not null auto_increment,user_id int,PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
 	'CREATE TABLE Transactions(id int not null auto_increment,user_id int,transaction_data varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
@@ -21,7 +21,7 @@ const initGuestBookTables = (conn) => executeQueries(conn, [
 
 /*USERS*/
 const getAllUsers = (conn) => handleQuery(conn, `SELECT * FROM Users`)
-const addUser = (conn, opts) => handleQuery(conn, `INSERT INTO Users (email, pass) VALUES ("${opts.email}", "${opts.pass}")`)
+const addUser = (conn, opts) => handleQuery(conn, `INSERT INTO Users (email, salt, hash) VALUES ("${opts.email}", "${opts.salt}", "${opts.hash}")`)
 const getUser = (conn, opts) => handleQuery(conn, `SELECT * FROM Users WHERE ${opts.email ? 'email' : 'id'}="${opts.email ? opts.email : opts.id}"`)
 const updateUser = (conn, opts) => handleQuery(conn, `UPDATE Users SET email="${opts.email}",  pass="${opts.pass}" WHERE id="${opts.id}";`)
 const deleteUser = (conn, opts) => handleQuery(conn, `DELETE FROM Users WHERE id="${opts.id}"`)
