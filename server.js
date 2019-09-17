@@ -8,13 +8,15 @@ const app = express()
 const port = process.env.PORT || 3000
 
 const crypto = require('crypto')
-const secureRandomInt = (length) => new Promise((resolve, reject) => {
+const secureRandomHex = (length) => new Promise((resolve, reject) => {
 	crypto.randomBytes(Math.ceil(length/2), (err, buff) => {
 		if(err !== null) {
 			reject(err)
 		} else {
-			const randInt = parseInt(buff.toString('hex'), 16)
-			resolve(+randInt.toString().slice(0, length))
+			const randHex = buff.toString('hex')
+			resolve(randHex.slice(0, length)) // just use the hex.. probably more secure anyway.
+			// const randInt = parseInt(randHex, 16)
+			// resolve(+randInt.toString().slice(0, length))
 		}
 	})
 })
@@ -102,7 +104,7 @@ app.get('/', async (req, res) => res.send('OK'))
 app.post('/add-user', async (req, res) => {
 	const reqData = req.body
 
-	const salt = await secureRandomInt(16)
+	const salt = await secureRandomHex(16)
 
 	const hashed = await hash(`${salt}${reqData.password}`)
 	
