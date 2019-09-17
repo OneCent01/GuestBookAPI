@@ -1,43 +1,8 @@
-const mysql = require('mysql')
-const dotenv = require('dotenv/config');
-
-const express = require('express')
-const bodyParser = require('body-parser')
-
-const app = express()
-const port = process.env.PORT || 3000
-
-const crypto = require('crypto')
-const secureRandomHex = (length) => new Promise((resolve, reject) => {
-	crypto.randomBytes(Math.ceil(length/2), (err, buff) => {
-		if(err !== null) {
-			reject(err)
-		} else {
-			const randHex = buff.toString('hex')
-			resolve(randHex.slice(0, length)) // just use the hex.. probably more secure anyway.
-			// const randInt = parseInt(randHex, 16)
-			// resolve(+randInt.toString().slice(0, length))
-		}
-	})
-})
-
-const argon2 = require('argon2')
-const hash = (saltedPass) => new Promise(async (resolve, reject) => resolve(await argon2.hash(saltedPass)))
-const verify = (saltedPass, hash) => new Promise(async (resolve, reject) => resolve(await argon2.verify(hash, saltedPass)))
-
-
-// Disable CORS for now for easier development...
-// comment out before in production for security reasons
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*")
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
-  next()
-})
-
-// I guess we need both of these middleware parsers to be able to 
-// see the body in a post request... OK
-app.use(bodyParser.urlencoded({ extended: true }))
-app.use(bodyParser.json())
+const {
+	secureRandomHex,
+	hash,
+	verify
+} = require('./security')
 
 const {
 	addUser, 
@@ -66,6 +31,28 @@ const {
 const {
 	initAndCreatDbIfNone
 } = require('./initDatabase.js')
+
+const mysql = require('mysql')
+const dotenv = require('dotenv/config');
+
+const express = require('express')
+const bodyParser = require('body-parser')
+
+const app = express()
+const port = process.env.PORT || 3000
+
+// Disable CORS for now for easier development...
+// comment out before in production for security reasons
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*")
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+  next()
+})
+
+// I guess we need both of these middleware parsers to be able to 
+// see the body in a post request... OK
+app.use(bodyParser.urlencoded({ extended: true }))
+app.use(bodyParser.json())
 
 // these options here are what we change to configure connections to 
 // mySQL databases, including external ones
