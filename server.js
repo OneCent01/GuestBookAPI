@@ -77,6 +77,8 @@ initAndCreatDbIfNone(connection, connectionOps, dataBase)
 })
 .catch(err => {})
 
+
+// UTIL FUNCTION
 const exexuteDbQueryAndForwardRes = (res, queryFn, opts) => {
 	queryFn(connection, opts)
 		.then(queryRes => res.send(JSON.stringify(queryRes)))

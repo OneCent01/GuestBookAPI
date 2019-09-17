@@ -10,7 +10,7 @@ const {
 	killConnection
 } = require('./connect.js')
 
-// attempt to establish connection toa specific database in mySQL,
+// attempt to establish connection to a specific database in mySQL,
 // if it's not there, make it, then try connecting to it again
 const initAndCreatDbIfNone = (connection, opts, db) => new Promise((resolve, reject) => {
 	initConnection(connection)

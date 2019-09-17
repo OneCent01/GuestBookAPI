@@ -15,8 +15,8 @@ const initGuestBookTables = (conn) => executeQueries(conn, [
 	'CREATE TABLE CustomerFaces(id int not null auto_increment,face_id int,customer_id varchar(255),PRIMARY KEY(id),FOREIGN KEY(face_id) REFERENCES Faces(id));',
 	'CREATE TABLE CustomerData(id int not null auto_increment,customer_id int,user_data text,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id));',
 	'CREATE TABLE CustomerTransactions(id int not null auto_increment,customer_id int,transaction_id int,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id),FOREIGN KEY(transaction_id) REFERENCES Transactions(id));',
-	'CREATE TABLE Products(id int not null auto_increment,name varchar(255),category varchar(255),barcode int,description varchar(255),img_urls varchar(255),price_data varchar(255),PRIMARY KEY(id));',
-	'CREATE TABLE UserProducts(id int not null auto_increment,user_id int not null,product_id int not null,stock int,price decimal,history varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Products(id));'
+	'CREATE TABLE Products(id int not null auto_increment,name varchar(255),category varchar(255),barcode varchar(255), description varchar(255),img_urls varchar(255),price_data varchar(255),PRIMARY KEY(id));',
+	'CREATE TABLE UserProducts(id int not null auto_increment,user_id int not null,product_id int not null, SKU varchar(255),stock int,price decimal,history varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Products(id));'
 ])
 
 /*USERS*/
