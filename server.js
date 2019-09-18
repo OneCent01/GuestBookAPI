@@ -72,18 +72,20 @@ let connection = mysql.createConnection({
 
 // DATABASE CONNECTION INITIALIZATION
 initAndCreatDbIfNone(connection, connectionOps, dataBase)
-.then((conn) => {
-	connection = conn
-})
+.then(conn => { connection = conn })
 .catch(err => {})
 
 
-// UTIL FUNCTION
+// UTIL FUNCTIONS
 const exexuteDbQueryAndForwardRes = (res, queryFn, opts) => {
 	queryFn(connection, opts)
 		.then(queryRes => res.send(JSON.stringify(queryRes)))
 		.catch(err => res.send(JSON.stringify(err)))
 }
+
+// very simple email format validation ensuring the email is in in the form: _@_._
+// anything more restrictive than that is too opinionated
+const emailIsValid = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
 /********** ROOT **************/
 app.get('/', async (req, res) => res.send('OK'))
@@ -92,17 +94,21 @@ app.get('/', async (req, res) => res.send('OK'))
 /********* USERS *************/
 app.post('/add-user', async (req, res) => {
 	const reqData = req.body
-
-	const salt = await secureRandomHex(16)
-
-	const hashed = await hash(`${salt}${reqData.password}`)
-	
-	const opts = {
-		email: reqData.email, 
-		salt: salt,
-		hash: hashed
+	if(emailIsValid(reqData.email)) {
+		const salt = await secureRandomHex(16)
+		const hash = await hash(`${salt}${reqData.password}`)
+		
+		const opts = {
+			email: reqData.email, 
+			salt: salt,
+			hash: hash
+		}
+		exexuteDbQueryAndForwardRes(res, addUser, opts)
+	} else {
+		res.send(JSON.stringify({success: false, error: 'INVALID EMAIL FORMAT, MUST CONFORM TO THE STRUCTURE: _@_._'}))
+		return
 	}
-	exexuteDbQueryAndForwardRes(res, addUser, opts)
+
 })
 
 app.post('/auth-user', async (req, res) => {
@@ -112,12 +118,7 @@ app.post('/auth-user', async (req, res) => {
 	const user = userRes.data[0]
 	const verified = await verify(`${user.salt}${reqData.password}`, user.hash)
 
-	if(verified) {
-		res.send(JSON.stringify({success: true}))
-	} else {
-		res.send(JSON.stringify({success: false}))
-	}
-
+	res.send(JSON.stringify({success: verified}))
 })
 
 app.get('/get-user/:email?/:id?', (req, res) => {
@@ -149,27 +150,6 @@ app.delete('/delete-user', (req, res) => {
 	// and compared against that stored in the database
 	exexuteDbQueryAndForwardRes(res, deleteUser, opts)
 })
-
-
-/************ FACES ***************/
-app.post('/add-face', (req, res) => {
-	const reqData = req.body
-	const opts = {
-		user_id: reqData.user_id,
-		image_path: reqData.image_path
-	}
-	exexuteDbQueryAndForwardRes(res, addFace, opts)
-})
-
-app.get('/get-faces/:user_id?', (req, res) => {
-	const opts = {
-		user_id: req.query.user_id
-	}
-	exexuteDbQueryAndForwardRes(res, getFaces, opts)
-})
-
-// shouldn't ever need to update or delete faces...
-
 
 /************ TRANSACTIONS ***************/
 app.post('/add-transaction', (req, res) => {
