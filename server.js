@@ -228,8 +228,8 @@ app.get('/scan-product/:barcode?', (req, res) => {
 	// exists in the database and when the last update scan was... 
 	// if it's been over a year since the last scan, perform it again and update the data
 	fetchProductData(barcode)
-	.then(res => console.log('res: ', res))
-	.catch(err => console.log('errr: ', err))
+	.then(fetchRes => res.send(JSON.stringify(fetchRes)))
+	.catch(err => res.send(JSON.stringify(err)))
 })
 
 app.get('/get-product/:ids?', (req, res) => {

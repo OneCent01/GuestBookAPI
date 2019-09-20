@@ -4,7 +4,11 @@ const cheerio = require('cheerio')
 const ajax = (method, url, payload=undefined) => new Promise((resolve, reject) => {
 	https.get(
 		url,
-		res => res.on('data', data =>resolve(data.toString('utf8')))
+		res => {
+			const dataBuffers = []
+			res.on('data', data => dataBuffers.push(data.toString('utf8')))
+			res.on('end', () => resolve(dataBuffers.join('')))
+		}
 	).on('error', reject)
 })
 
@@ -39,7 +43,7 @@ const scrapeUpcDatabase = url => new Promise((resolve, reject) => {
 		resolve(tableData)
 
 	})
-	.catch(reject)
+	.catch(err => resolve({}))
 })
 
 const scrapeUpcItemDb = url => new Promise((resolve, reject) => {
@@ -49,36 +53,67 @@ const scrapeUpcItemDb = url => new Promise((resolve, reject) => {
 		
 		const productData = {}
 
-		const productImg = productPage('.product')[0].attribs.src
-		productData.img = productImg
+		const titles = productPage('.cont ol li')
+		const titlesText = Object.keys(titles).map(rowIndex => {
+			const titleRow = titles[rowIndex].children
+			if(
+				titleRow 
+				&& titleRow.length 
+				&& Array.isArray(titleRow)
+			) {
+				return titleRow[0].data
+			}
+			return false
+		}).filter(Boolean)
+		productData.titles = titlesText
+
+		const imageElement = productPage('.main-img img')[0]
+		const imgUrl = imageElement.attribs.src
+		productData.image = imgUrl
 		
-		const productRows = productPage('.detail-list tr')
-		Object.keys(productRows).forEach(rowIndex => {
-			const typedRowIndex = +rowIndex
-			if(!isNaN(typedRowIndex)) {
-				const row = productRows[typedRowIndex]
-				const rowCells = cheerio.load(row).text().split(':').map(s=>s.trim())
-				productData[rowCells[0]] = rowCells[1]
-			} 
-		})
 		resolve(productData)
 	})
-	.catch(reject)
+	.catch(err => resolve({}))
 })
 
-const scraperlessPromise = host => new Promise((resolve, reject) => {
-	reject({error: `SCRAPER NOT FOR FOR HOST ${host}`})
+const scrapeBarcodelookup = url => new Promise((resolve, reject) => {
+	ajax('GET', url)
+	.then(html => {
+		const productPage = cheerio.load(html)
+		const productData = {}
+		const title = productPage('.product-details h4')
+		productData.title = title.text().trim()
+
+		const img = productPage('#img_preview')[0]
+		const imgUrl = img.attribs['data-cfsrc']
+		productData.image = imgUrl
+		
+		const productRows = productPage('.product-details .row')[1]
+		const detailsRows = cheerio.load(productRows)('div div')
+		const detailsRowsKeys = Object.keys(detailsRows)
+		detailsRowsKeys.forEach(detailIndex => {
+			const typedDetailIndex = +detailIndex
+			if(!isNaN(typedDetailIndex)) {
+				const row = detailsRows[detailIndex]
+				const rowData = cheerio.load(row).text().split(':')
+				if(rowData.length === 2) {
+					productData[rowData[0].trim()] = rowData[1].trim()
+				}
+			}
+		})
+
+		resolve(productData)
+	})
+	.catch(err => resolve({}))
 })
+
+const scraperlessPromise = () => new Promise((resolve, reject) => resolve({}))
 
 const scrapers = {
 	upcdatabase: scrapeUpcDatabase,
-	upcitemdb: scrapeUpcItemDb
+	upcitemdb: scrapeUpcItemDb,
+	barcodelookup: scrapeBarcodelookup
 }
-
-const lookups = [
-	'https://www.upcdatabase.com/item/|BARCODE|',
-	'https://www.upcitemdb.com/upc/|BARCODE|'
-]
 
 const lookupProduct = (barcode, baseUrl) => {
 	const url = baseUrl.replace('|BARCODE|', barcode)
@@ -86,9 +121,53 @@ const lookupProduct = (barcode, baseUrl) => {
 	const scraper = scrapers[host]
 	const scaperFound = (scraper && typeof scraper === 'function')
 	
-	return scaperFound ? scraper(url) : scraperlessPromise(host)
+	return scaperFound ? scraper(url) : scraperlessPromise()
 }
-const fetchProductData = barcode => Promise.all(lookups.map(lookup => lookupProduct(barcode, lookup)))
+
+const uniteProductData = async dataPromise => {
+	const data = await dataPromise
+	return data.reduce((final, datum) => ({
+		...final, 
+		...datum,
+		titles: [
+			...final.titles, 
+			...(
+				datum.title ? [datum.title] 
+				: (datum.titles && datum.titles.length) ? datum.titles 
+				: []
+			)
+		],
+		images: [
+			...final.images,
+			...(
+				datum.images ? datum.images
+				: datum.image ? [datum.image]
+				: datum.imgUrl ? [datum.imgUrl]
+				: []
+			)
+		]
+	}), {
+		titles:[],
+		images: []
+	})
+}
+
+const lookups = [
+	'https://www.upcdatabase.com/item/|BARCODE|',
+	'https://www.upcitemdb.com/upc/|BARCODE|',
+	'https://www.barcodelookup.com/|BARCODE|'
+]
+
+const fetchProductData = barcode => uniteProductData(
+	Promise.all(
+		lookups.map(
+			lookup => lookupProduct(
+				barcode, lookup
+			)
+		)
+	)
+)
+
 
 module.exports = {
 	fetchProductData
