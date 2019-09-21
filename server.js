@@ -1,7 +1,8 @@
 const {
 	secureRandomHex,
 	hash,
-	verify
+	verify,
+	getAccessToken
 } = require('./security')
 
 const {
@@ -25,7 +26,8 @@ const {
 	addUserProduct,
 	getUserProducts,
 	updateUserProduct,
-	deleteUserProduct
+	deleteUserProduct,
+	initGuestBookTables
 } = require('./dbQueries.js')
 
 const {
@@ -86,8 +88,9 @@ const exexuteDbQueryAndForwardRes = (res, queryFn, opts) => {
 }
 
 /********** ROOT **************/
-app.get('/', async (req, res) => res.send('OK'))
-
+app.get('/', async (req, res) => {
+	res.send(JSON.stringify("ok"))
+})
 
 /********* USERS *************/
 app.post('/add-user', async (req, res) => {
@@ -113,7 +116,13 @@ app.post('/auth-user', async (req, res) => {
 	const verified = await verify(`${user.salt}${reqData.password}`, user.hash)
 
 	if(verified) {
-		res.send(JSON.stringify({success: true}))
+		const accessToken = getAccessToken(user)
+		accessToken.then((token) => {
+			res.send({"access_token": token})
+		}).catch((err) => {
+			console.log(err)
+		})
+		
 	} else {
 		res.send(JSON.stringify({success: false}))
 	}
@@ -301,7 +310,6 @@ app.delete('/delete-user-product', (req, res) => {
 	}
 	exexuteDbQueryAndForwardRes(res, deleteUserProduct, opts)
 })
-
 
 /*********** START THE SERVER ************/
 const server = app.listen(port, () => console.log(`Listening on port ${port}...`))
