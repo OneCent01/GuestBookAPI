@@ -88,7 +88,7 @@ const exexuteDbQueryAndForwardRes = (res, queryFn, opts) => {
 const emailIsValid = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
 /********** ROOT **************/
-app.get('/', async (req, res) => res.send('OK'))
+app.get('/', async (req, res) => res.send(JSON.stringify({res: 'OK'})))
 
 
 /********* USERS *************/
@@ -115,6 +115,10 @@ app.post('/auth-user', async (req, res) => {
 	const reqData = req.body
 
 	const userRes = await getUser(connection, {email: reqData.email})
+	if(!userRes.data || userRes.data.length === 0) {
+		res.send(JSON.stringify({success: false}))
+		return
+	}
 	const user = userRes.data[0]
 	const verified = await verify(`${user.salt}${reqData.password}`, user.hash)
 

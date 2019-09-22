@@ -12,6 +12,59 @@ const ajax = (method, url, payload=undefined) => new Promise((resolve, reject) =
 	).on('error', reject)
 })
 
+const scrapeKeHEDatabase = url => new Promise((resolve, reject) => {
+	ajax('GET', url)
+	.then(html => {
+		const validProps = ['Brand', 'Description','CasePack']
+		const cheeroPage = cheerio.load(html)
+		const table = cheeroPage('table')[1]
+		const cheerioTable = cheerio.load(table)
+		const productRows = cheerioTable('tr')
+		const titlesRows = productRows[0]
+		const cheerioTitles = cheerio.load(titlesRows)
+		const titlesCols = cheerioTitles('th')
+		const titles = []
+		let i = 1
+		let cheerioTitle, titleText
+		while(i < titlesCols.length) {
+			cheerioTitle = cheerio.load(titlesCols[i])
+			titleText = cheerioTitle.text().trim()
+			titles.push(titleText)
+			i++
+		}
+		const values = []
+		const row = productRows[1]
+		const cheerioValues = cheerio.load(row)
+		const rowValuesCol = cheerioValues('td')
+		i = 2
+		let cheerioValue, valueText
+		while(i < rowValuesCol.length) {
+			cheerioValue = cheerio.load(rowValuesCol[i])
+			values.push(cheerioValue.text().trim())
+			i++
+		}
+
+		const dataObj = titles.reduce((final, prop, i) => {
+			if(
+				validProps.includes(prop)
+				&& values[i].length 
+				&& values[i] !== 'log in!'
+			) {
+				let daProp = (
+					prop === 'Description' ? 'title' 
+					: prop === 'CasePack' ? 'quantity'
+					: prop
+				)
+				final[daProp] = values[i]
+			}
+			return final
+		}, {})
+		resolve(dataObj)
+
+	})
+	.catch(err => resolve({}))
+})
+
 const scrapeUpcDatabase = url => new Promise((resolve, reject) => {
 	ajax('GET', url)
 	.then(html => {
@@ -110,14 +163,15 @@ const scrapeBarcodelookup = url => new Promise((resolve, reject) => {
 const scraperlessPromise = () => new Promise((resolve, reject) => resolve({}))
 
 const scrapers = {
-	upcdatabase: scrapeUpcDatabase,
-	upcitemdb: scrapeUpcItemDb,
-	barcodelookup: scrapeBarcodelookup
+	'www.upcdatabase.com': scrapeUpcDatabase,
+	'www.upcitemdb.com': scrapeUpcItemDb,
+	'www.barcodelookup.com': scrapeBarcodelookup,
+	'gourmet.kehe.com': scrapeKeHEDatabase
 }
 
 const lookupProduct = (barcode, baseUrl) => {
 	const url = baseUrl.replace('|BARCODE|', barcode)
-	const host = new URL(url).hostname.split('.').slice(1, -1).join('.')
+	const host = new URL(url).hostname
 	const scraper = scrapers[host]
 	const scaperFound = (scraper && typeof scraper === 'function')
 	
@@ -155,7 +209,8 @@ const uniteProductData = async dataPromise => {
 const lookups = [
 	'https://www.upcdatabase.com/item/|BARCODE|',
 	'https://www.upcitemdb.com/upc/|BARCODE|',
-	'https://www.barcodelookup.com/|BARCODE|'
+	'https://www.barcodelookup.com/|BARCODE|',
+	'https://gourmet.kehe.com/search?search=|BARCODE|'
 ]
 
 const fetchProductData = barcode => uniteProductData(
