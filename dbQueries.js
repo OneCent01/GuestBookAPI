@@ -60,9 +60,9 @@ const updateUserProduct = (conn, opts) => handleQuery(conn, `UPDATE UserProducts
 const deleteUserProduct = (conn, opts) => handleQuery(conn, `DELETE FROM UserProducts WHERE id="${opts.user_product_id}"`)
 
 module.exports = { 
-	initGuestBookTables, 
+	initGuestBookTables,
 	initGuestBookDatabase,
-	getAllUsers, 
+	getAllUsers,
 	addUser,
 	getUser,
 	updateUser,
