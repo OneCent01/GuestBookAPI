@@ -125,18 +125,13 @@ app.post('/auth-user', async (req, res) => {
 	const verified = await verify(`${user.salt}${reqData.password}`, user.hash)
 
 	if(verified) {
-		const accessToken = getAccessToken(user)
-		accessToken.then((token) => {
-			res.send({"access_token": token})
-		}).catch((err) => {
-			console.log(err)
-		})
+		getAccessToken(user)
+		.then(token => res.send(JSON.stringify({success: true, token: token})))
+		.catch(err => res.send(JSON.stringify({success: false})))
 		
 	} else {
 		res.send(JSON.stringify({success: false}))
 	}
-
-	res.send(JSON.stringify({success: verified}))
 })
 
 app.get('/get-user/:email?/:id?', (req, res) => {
