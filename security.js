@@ -4,9 +4,9 @@ const secureRandomHex = (length) => new Promise((resolve, reject) => {
 		if(err !== null) {
 			reject(err)
 		} else {
+			// just use the hex.. probably more secure anyway.
 			const randHex = buff.toString('hex')
 			resolve(randHex.slice(0, length)) 
-			// just use the hex.. probably more secure anyway.
 			// const randInt = parseInt(randHex, 16)
 			// resolve(+randInt.toString().slice(0, length))
 		}
@@ -18,22 +18,58 @@ const hash = (saltedPass) => new Promise(async (resolve, reject) => resolve(awai
 const verify = (saltedPass, hash) => new Promise(async (resolve, reject) => resolve(await argon2.verify(hash, saltedPass)))
 
 
-const  jwt  =  require('jsonwebtoken');
-const SECRET_KEY = "secretkey23456";
-const getAccessToken = (user) => new Promise((resolve, reject) => {
-	const expiresIn = 24 * 60 * 60;
+const jwt  =  require('jsonwebtoken')
+const SECRET_KEY = "secretkey23456"
+const expiresIn = 24 * 60 * 60
+const issueToken = (id) => new Promise((resolve, reject) => {
 	const accessToken = jwt.sign(
-		{ id:  user }, 
-		SECRET_KEY, 
-		{ expiresIn }
-	);
+		{ 
+			id 
+		}, // paylod
+		SECRET_KEY, // private key
+		{ expiresIn } // sign options
+	)
 
 	resolve(accessToken)
 })
+
+var base64 = {
+	encode: unencoded => Buffer.from(unencoded || '').toString('base64'),
+	decode: encoded => Buffer.from(encoded || '', 'base64').toString('utf8'),
+	urlEncode: unencoded => base64.encode(unencoded).replace('\+', '-').replace('\/', '_').replace(/=+$/, ''),
+	urlDecode: encoded => {
+		encoded = encoded.replace('-', '+').replace('_', '/')
+		while (encoded.length % 4) {
+			encoded += '='
+		}
+
+		return base64.decode(encoded)
+	}
+};
+
+const verifyToken = (token) => {
+	try {
+		const decodedToken = jwt.verify(token, SECRET_KEY, { expiresIn })
+		const payload = base64.urlEncode(JSON.stringify(decodedToken))
+		const headers = base64.urlEncode(JSON.stringify({
+			"alg": "HS256",
+			"typ": "JWT"
+		}))
+		const tokenSig = token.split('.')[2]
+		const signiature = crypto.createHmac('SHA256', SECRET_KEY)
+		.update(`${headers}.${payload}`).digest('base64')
+		.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_")
+
+		return signiature === tokenSig
+	} catch(e) {
+		return false
+	}
+}
 
 module.exports = {
 	secureRandomHex,
 	hash,
 	verify,
-	getAccessToken
+	issueToken,
+	verifyToken
 }

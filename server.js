@@ -2,7 +2,8 @@ const {
 	secureRandomHex,
 	hash,
 	verify,
-	getAccessToken
+	issueToken,
+	verifyToken
 } = require('./security')
 
 const {
@@ -43,13 +44,12 @@ const bodyParser = require('body-parser')
 const app = express()
 const port = process.env.PORT || 3000
 
-// Disable CORS for now for easier development...
-// comment out before in production for security reasons
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*")
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
-  next()
-})
+var cors = require('cors')
+
+app.use(cors({
+	credentials: true, 
+	origin: 'http://localhost:8080'
+}))
 
 // I guess we need both of these middleware parsers to be able to 
 // see the body in a post request... OK
@@ -125,7 +125,7 @@ app.post('/auth-user', async (req, res) => {
 	const verified = await verify(`${user.salt}${reqData.password}`, user.hash)
 
 	if(verified) {
-		getAccessToken(user)
+		issueToken(user)
 		.then(token => res.send(JSON.stringify({success: true, token: token})))
 		.catch(err => res.send(JSON.stringify({success: false})))
 		
@@ -133,6 +133,15 @@ app.post('/auth-user', async (req, res) => {
 		res.send(JSON.stringify({success: false}))
 	}
 })
+
+app.get('/user-data', (req, res) => {
+	const headers = req.headers
+	const token = headers.authorization
+	const isValid = verifyToken(token)
+
+	res.send(JSON.stringify({isValid}))
+})
+
 
 app.get('/get-user/:email?/:id?', (req, res) => {
 	const opts = (
@@ -278,7 +287,8 @@ app.post('/add-user-product', (req, res) => {
 		product_id: reqData.product_id,
 		stock: reqData.stock,
 		price: reqData.price,
-		history: reqData.history
+		imgUrls: reqData.imgUrls,
+		data: reqData.productData
 	}
 	exexuteDbQueryAndForwardRes(res, addUserProduct, opts)
 })
