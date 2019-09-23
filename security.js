@@ -37,14 +37,7 @@ var base64 = {
 	encode: unencoded => Buffer.from(unencoded || '').toString('base64'),
 	decode: encoded => Buffer.from(encoded || '', 'base64').toString('utf8'),
 	urlEncode: unencoded => base64.encode(unencoded).replace('\+', '-').replace('\/', '_').replace(/=+$/, ''),
-	urlDecode: encoded => {
-		encoded = encoded.replace('-', '+').replace('_', '/')
-		while (encoded.length % 4) {
-			encoded += '='
-		}
-
-		return base64.decode(encoded)
-	}
+	urlDecode: encoded => base64.decode(`${encoded.replace('-', '+').replace('_', '/')}${new Array(encoded % 4).fill('=').join('')}`)
 };
 
 const verifyToken = (token) => {
