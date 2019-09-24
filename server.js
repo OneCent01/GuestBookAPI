@@ -8,7 +8,6 @@ const {
 
 const {
 	addUser, 
-	getAllUsers,
     getUser,
     updateUser,
 	deleteUser,
@@ -46,16 +45,6 @@ const port = process.env.PORT || 3000
 
 var cors = require('cors')
 
-app.use(cors({
-	credentials: true, 
-	origin: 'http://localhost:8080'
-}))
-
-// I guess we need both of these middleware parsers to be able to 
-// see the body in a post request... OK
-app.use(bodyParser.urlencoded({ extended: true }))
-app.use(bodyParser.json())
-
 // these options here are what we change to configure connections to 
 // mySQL databases, including external ones
 const connectionOps = {
@@ -63,6 +52,7 @@ const connectionOps = {
 	user: process.env.DB_USER,
 	password: process.env.DB_PASSWORD
 }
+
 
 // INITIALIZE CONNECTION OPTS, MAY NEED TO CHANGE IF 
 // GUESTBOOK ISN'T CURRENTLY A DB IN THE MYSQL DB
@@ -89,6 +79,42 @@ const exexuteDbQueryAndForwardRes = (res, queryFn, opts) => {
 // anything more restrictive than that is too opinionated
 const emailIsValid = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
+/********** MIDDLEWARE ***************/
+
+app.use(cors({
+	credentials: true, 
+	origin: ['http://localhost:8080', 'http://localhost:8081']
+}))
+
+// I guess we need both of these middleware parsers to be able to 
+// see the body in a post request... OK
+app.use(bodyParser.urlencoded({ extended: true }))
+app.use(bodyParser.json())
+
+const noAuthRequiredPahts = ['/auth-user', '/add-user']
+
+app.use('', (req, res, next) => {
+	const path = req.path 
+
+	if(!noAuthRequiredPahts.find(openPath => path.includes(openPath))) {
+		const headers = req.headers
+		const token = headers.authorization
+		const isValid = (token && token.length && verifyToken(token))
+		if(isValid && isValid.success) {
+			req.user = isValid.user
+			next()
+		} else {
+			res.send(JOSN.stringify({
+				success: false, 
+				error: 'INVALID TOKEN'
+			}))
+		}
+	} else {
+		next()
+	}
+
+})
+
 /********** ROOT **************/
 app.get('/', async (req, res) => res.send(JSON.stringify({res: 'OK'})))
 
@@ -107,13 +133,15 @@ app.post('/add-user', async (req, res) => {
 		}
 		exexuteDbQueryAndForwardRes(res, addUser, opts)
 	} else {
-		res.send(JSON.stringify({success: false, error: 'INVALID EMAIL FORMAT, MUST CONFORM TO THE STRUCTURE: _@_._'}))
-		return
+		res.send(JSON.stringify({
+			success: false, 
+			error: 'INVALID EMAIL FORMAT, MUST CONFORM TO THE STRUCTURE: _@_._'
+		}))
 	}
 
 })
 
-app.post('/auth-user', async (req, res) => {
+app.post('/auth-user*', async (req, res) => {
 	const reqData = req.body
 
 	const userRes = await getUser(connection, {email: reqData.email})
@@ -122,11 +150,15 @@ app.post('/auth-user', async (req, res) => {
 		return
 	}
 	const user = userRes.data[0]
-	const verified = await verify(`${user.salt}${reqData.password}`, user.hash)
+	const saltedPass = `${user.salt}${reqData.password}`
+	const verified = await verify(saltedPass, user.hash)
 
 	if(verified) {
 		issueToken(user)
-		.then(token => res.send(JSON.stringify({success: true, token: token})))
+		.then(token => res.send(JSON.stringify({
+			success: true, 
+			token: token
+		})))
 		.catch(err => res.send(JSON.stringify({success: false})))
 		
 	} else {
@@ -134,12 +166,59 @@ app.post('/auth-user', async (req, res) => {
 	}
 })
 
-app.get('/user-data', (req, res) => {
-	const headers = req.headers
-	const token = headers.authorization
-	const isValid = verifyToken(token)
+// this array of objects determines the queries executed to get 
+// the user data on login. Designed for flexibility and scalability;
+// as out the variety of data we collect grows and changes, we can
+// add or remove query objects from this array to get different results.
+const getDataQueries = [
+	{
+		query: getUserProducts,
+		dataKey: 'userProductData'
+	}
+]
+app.get('/user-data', async (req, res) => {
+	const user = req.user.id
+	const user_id = user.id
 
-	res.send(JSON.stringify({isValid}))
+	// each query is a promise, so lets execute them concurrently,  
+	// then resolve once all of them resolve: 
+	const results = await Promise.all(
+		// iterate over evry queryObject
+		getDataQueries.map( 
+			// wrap the promise is a promise.. I know, kind of messy, 
+			// but necessary to add additional meta-data
+			// to the resolved response from the query... 
+			// we wante to let data union operation on the results
+			// to have a key for every data array returned, otherwise 
+			// we'll end up with a bunch of unlabelled arrays
+			queryObj => new Promise(
+				async (resolve, reject) => {
+					const queryRes = await queryObj.query(connection, { user_id })
+					resolve({
+						dataKey: queryObj.dataKey,
+						data: queryRes.success ? queryRes.data : queryRes.error,
+						success: queryRes.success
+					})
+				}
+			)
+		)
+	)
+	
+	const unitedData = results.reduce((final, result) => {
+		if(result.success) {
+			final.data[result.dataKey] = result.data
+		} else {
+			final.success = false
+			final.errors = (
+				final.errors 
+					? [...final.errors, result.data] 
+					: [result.data]
+			)
+		}
+		return final
+	}, {success: true, data: {}})
+
+	res.send(JSON.stringify(unitedData))
 })
 
 
@@ -197,8 +276,6 @@ app.delete('/delete-transaction', (req, res) => {
 	}
 	exexuteDbQueryAndForwardRes(res, deleteTransaction, opts)
 })
-
-// shouldn't ever need to update or delete transactions...
 
 /************ CUSTOMERS ***************/
 app.post('/add-customer', (req, res) => {

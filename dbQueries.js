@@ -20,7 +20,6 @@ const initGuestBookTables = (conn) => executeQueries(conn, [
 ])
 
 /*USERS*/
-const getAllUsers = (conn) => handleQuery(conn, `SELECT * FROM Users`)
 const addUser = (conn, opts) => handleQuery(conn, `INSERT INTO Users (email, salt, hash) VALUES ("${opts.email}", "${opts.salt}", "${opts.hash}")`)
 const getUser = (conn, opts) => handleQuery(conn, `SELECT * FROM Users WHERE ${opts.email ? 'email' : 'id'}="${opts.email ? opts.email : opts.id}"`)
 const updateUser = (conn, opts) => handleQuery(conn, `UPDATE Users SET email="${opts.email}",  pass="${opts.pass}" WHERE id="${opts.id}";`)
@@ -62,7 +61,6 @@ const deleteUserProduct = (conn, opts) => handleQuery(conn, `DELETE FROM UserPro
 module.exports = { 
 	initGuestBookTables,
 	initGuestBookDatabase,
-	getAllUsers,
 	addUser,
 	getUser,
 	updateUser,

@@ -23,9 +23,7 @@ const SECRET_KEY = "secretkey23456"
 const expiresIn = 24 * 60 * 60
 const issueToken = (id) => new Promise((resolve, reject) => {
 	const accessToken = jwt.sign(
-		{ 
-			id 
-		}, // paylod
+		{ id }, // paylod
 		SECRET_KEY, // private key
 		{ expiresIn } // sign options
 	)
@@ -38,12 +36,12 @@ var base64 = {
 	decode: encoded => Buffer.from(encoded || '', 'base64').toString('utf8'),
 	urlEncode: unencoded => base64.encode(unencoded).replace('\+', '-').replace('\/', '_').replace(/=+$/, ''),
 	urlDecode: encoded => base64.decode(`${encoded.replace('-', '+').replace('_', '/')}${new Array(encoded % 4).fill('=').join('')}`)
-};
+}
 
 const verifyToken = (token) => {
 	try {
-		const decodedToken = jwt.verify(token, SECRET_KEY, { expiresIn })
-		const payload = base64.urlEncode(JSON.stringify(decodedToken))
+		const decodedPayload = jwt.verify(token, SECRET_KEY, { expiresIn })
+		const payload = base64.urlEncode(JSON.stringify(decodedPayload))
 		const headers = base64.urlEncode(JSON.stringify({
 			"alg": "HS256",
 			"typ": "JWT"
@@ -53,9 +51,9 @@ const verifyToken = (token) => {
 		.update(`${headers}.${payload}`).digest('base64')
 		.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_")
 
-		return signiature === tokenSig
+		return {success: signiature === tokenSig, user: decodedPayload}
 	} catch(e) {
-		return false
+		return {success: false}
 	}
 }
 
