@@ -1,4 +1,4 @@
-const fetch  = require('./fetch.js')
+const {fetch}  = require('./fetch.js')
 const cheerio = require('cheerio')
 
 const scrapeKeHEDatabase = url => new Promise((resolve, reject) => {
@@ -161,22 +161,29 @@ const scrapers = {
 const lookupProduct = (barcode, baseUrl) => {
 	const url = baseUrl.replace('|BARCODE|', barcode)
 	const host = new URL(url).hostname
-	const scraper = scrapers[host]
-	const scaperFound = (scraper && typeof scraper === 'function')
-	
-	return scaperFound ? scraper(url) : scraperlessPromise()
+	const scraperPromise = scrapers[host]
+	const scaperFound = (scraperPromise && typeof scraperPromise === 'function')
+	return scaperFound ? scraperPromise(url) : scraperlessPromise()
 }
+
+const objectKeysToLowerCase = object => Object.keys(object).reduce((final, prop) => {
+	final[prop.toLowerCase()] = object[prop]
+	return final
+}, {})
 
 const uniteProductData = async dataPromise => {
 	const data = await dataPromise
+	console.log('data: ', data)
+
 	return data.reduce((final, datum) => ({
 		...final, 
-		...datum,
+		...objectKeysToLowerCase(datum),
 		titles: [
 			...final.titles, 
 			...(
 				datum.title ? [datum.title] 
 				: (datum.titles && datum.titles.length) ? datum.titles 
+				: datum.Description ? [datum.Description]
 				: []
 			)
 		],
@@ -194,6 +201,7 @@ const uniteProductData = async dataPromise => {
 		images: []
 	})
 }
+
 
 const lookups = [
 	'https://www.upcdatabase.com/item/|BARCODE|',

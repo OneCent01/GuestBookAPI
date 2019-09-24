@@ -11,4 +11,4 @@ const fetch = (method, url, payload=undefined) => new Promise((resolve, reject) 
 	).on('error', reject)
 })
 
-export default fetch
+module.exports = {fetch}

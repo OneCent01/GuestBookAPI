@@ -15,8 +15,8 @@ const initGuestBookTables = (conn) => executeQueries(conn, [
 	'CREATE TABLE CustomerFaces(id int not null auto_increment,face_id int,customer_id varchar(255),PRIMARY KEY(id),FOREIGN KEY(face_id) REFERENCES Faces(id));',
 	'CREATE TABLE CustomerData(id int not null auto_increment,customer_id int,user_data text,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id));',
 	'CREATE TABLE CustomerTransactions(id int not null auto_increment,customer_id int,transaction_id int,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id),FOREIGN KEY(transaction_id) REFERENCES Transactions(id));',
-	'CREATE TABLE Products(id int not null auto_increment,name varchar(255),category varchar(255),barcode varchar(255), description varchar(255),img_urls varchar(255),price_data varchar(255),PRIMARY KEY(id));',
-	'CREATE TABLE UserProducts(id int not null auto_increment,user_id int not null,product_id int not null, SKU varchar(255),stock int,price decimal,history varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Products(id));'
+	'CREATE TABLE Products(id int not null auto_increment unique,name varchar(255),category varchar(255),barcode text, description varchar(255),img_urls varchar(255),price_data varchar(255),PRIMARY KEY(id));',
+	'CREATE TABLE UserProducts(id int not null auto_increment unique,user_id int not null,product_id int not null, SKU varchar(255),stock int,price decimal,history varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Products(id));'
 ])
 
 /*USERS*/
@@ -41,9 +41,9 @@ const getCustomers = (conn, opts) => handleQuery(conn, `SELECT * FROM Customers 
 const deleteCustomer = (conn, opts) => handleQuery(conn, `DELETE FROM Customers WHERE id="${opts.id}"`)
 
 /*PRODUCTS*/
-const addProduct = (conn, opts) => handleQuery(conn, `INSERT INTO Products (category, barcode, description, img_urls, price_data) VALUES ("${opts.category}", "${opts.barcode}", "${opts.description}", "${opts.img_urls}", "${opts.price_data}");`)
-const getProducts = (conn, opts) => handleQuery(conn, `SELECT * FROM Products WHERE id in (${
-	opts.product_ids.reduce((final, id, i) => i ? `${final}, "${id}"` : `"${id}"`, '')
+const addProduct = (conn, opts) => handleQuery(conn, `INSERT INTO Products (category, barcode, description, img_urls, price_data) VALUES ("${opts.category || ''}", "${opts.barcode}", "${opts.description || ''}", "${opts.img_urls || ''}", "${opts.price_data || ''}");`)
+const getProducts = (conn, opts) => handleQuery(conn, `SELECT * FROM Products WHERE barcode in (${
+	opts.barcodes.reduce((final, code, i) => i ? `${final}, "${code}"` : `"${code}"`, '')
 })`)
 const updateProduct = (conn, opts) => handleQuery(conn, `UPDATE Products SET ${
 	opts.attrs.reduce((final, attr, i) => i ? `${final}, ${attr.key}="${attr.value}"` : `${attr.key}="${attr.value}"`, '')

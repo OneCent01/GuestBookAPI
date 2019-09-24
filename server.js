@@ -34,6 +34,8 @@ const {
 	initAndCreatDbIfNone
 } = require('./initDatabase.js')
 
+const {fetchProductData} = require('./scrapeProdData.js')
+
 const mysql = require('mysql')
 const dotenv = require('dotenv/config');
 
@@ -185,7 +187,7 @@ app.get('/user-data', async (req, res) => {
 	const results = await Promise.all(
 		// iterate over evry queryObject
 		getDataQueries.map( 
-			// wrap the promise is a promise.. I know, kind of messy, 
+			// wrap the promise in a promise.. I know, kind of messy, 
 			// but necessary to add additional meta-data
 			// to the resolved response from the query... 
 			// we wante to let data union operation on the results
@@ -203,6 +205,8 @@ app.get('/user-data', async (req, res) => {
 			)
 		)
 	)
+
+	console.log('results: ', results)
 	
 	const unitedData = results.reduce((final, result) => {
 		if(result.success) {
@@ -307,28 +311,39 @@ app.delete('/delete-customers', (req, res) => {
 
 
 /************ PRODUCTS ****************/
-app.post('/add-product', (req, res) => {
-	const reqData = req.body
-	const opts = {
-		category: reqData.category,
-		barcode: reqData.barcode,
-		desc: reqData.description,
-		img_urls: reqData.img_urls,
-		price_data: reqData.price_data
-	}
-	exexuteDbQueryAndForwardRes(res, addProduct, opts)
-})
-
-const {fetchProductData} = require('./scrapeProdData.js')
-
-app.get('/scan-product/:barcode?', (req, res) => {
+const msPerDay = (1000 * 60 * 60 * 24)
+app.get('/scan-product/:barcode?', async (req, res) => {
 	const barcode = req.query.barcode
-	// before we do this, we should check to see if the product already 
-	// exists in the database and when the last update scan was... 
-	// if it's been over a year since the last scan, perform it again and update the data
-	fetchProductData(barcode)
-	.then(fetchRes => res.send(JSON.stringify(fetchRes)))
-	.catch(err => res.send(JSON.stringify(err)))
+
+	const productLookup = await getProducts(connection, {barcodes: [barcode]})
+	if(
+		!productLookup.success 
+		|| productLookup.data.length === 0
+		|| productLookup.data.lastLookup < (Date.now() - (msPerDay * 90))
+	) {
+
+		const productDataRes = await fetchProductData(barcode)
+		try {
+			const prodOpts = {...productDataRes, barcode}
+			const productAddedRes = await (
+				(productLookup.success && productLookup.data.length)
+					? updateProduct(connection, prodOpts)
+					: addProduct(connection, prodOpts)
+			)
+
+			if(!productAddedRes.success) {
+				res.send(JSON.stringify(productAddedRes))
+				return
+			} 
+
+		} catch(e) {
+			res.send(JSON.stringify(e))
+			return
+		}
+	}
+
+	const updatedProductLookup = await getProducts(connection, {barcodes: [barcode]})
+	res.send(JSON.stringify(updatedProductLookup))
 })
 
 app.get('/get-product/:ids?', (req, res) => {
@@ -357,17 +372,24 @@ app.delete('/delete-product', (req, res) => {
 
 
 /********** USER PRODUCTS *************/
-app.post('/add-user-product', (req, res) => {
+app.post('/add-user-product', async (req, res) => {
 	const reqData = req.body
-	const opts = {
-		user_id: reqData.user_id,
-		product_id: reqData.product_id,
-		stock: reqData.stock,
-		price: reqData.price,
-		imgUrls: reqData.imgUrls,
-		data: reqData.productData
+	const barcode = reqData.barcode
+
+	const userProductLookup = await getUserProduct(connection, {barcode})
+
+	const upsertUserProductRes = await (
+		userProductLookup.success
+		? updateUserProduct(connection, {/*TODO*/})
+		: addUserProduct(connection, {/*TODO*/})
+	)
+	
+	if(!upsertUserProductRes.success) {
+		res.send(JSON.stringify(upsertUserProductRes))
+	} else {
+		const updatedUserProductLookup = await getUserProduct(connection, {barcode})
+		res.send(JSON.stringify(updatedUserProductLookup))
 	}
-	exexuteDbQueryAndForwardRes(res, addUserProduct, opts)
 })
 
 app.get('/get-user-products/:user_id?', (req, res) => {
