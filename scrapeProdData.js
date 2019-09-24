@@ -1,19 +1,8 @@
-const https = require('https')
+const fetch  = require('./fetch.js')
 const cheerio = require('cheerio')
 
-const ajax = (method, url, payload=undefined) => new Promise((resolve, reject) => {
-	https.get(
-		url,
-		res => {
-			const dataBuffers = []
-			res.on('data', data => dataBuffers.push(data.toString('utf8')))
-			res.on('end', () => resolve(dataBuffers.join('')))
-		}
-	).on('error', reject)
-})
-
 const scrapeKeHEDatabase = url => new Promise((resolve, reject) => {
-	ajax('GET', url)
+	fetch('GET', url)
 	.then(html => {
 		const validProps = ['Brand', 'Description','CasePack']
 		const cheeroPage = cheerio.load(html)
@@ -66,7 +55,7 @@ const scrapeKeHEDatabase = url => new Promise((resolve, reject) => {
 })
 
 const scrapeUpcDatabase = url => new Promise((resolve, reject) => {
-	ajax('GET', url)
+	fetch('GET', url)
 	.then(html => {
 		const validProps = ['Description', 'Size/Weight', 'Issuing Country']
 		const productPage = cheerio.load(html)
@@ -100,7 +89,7 @@ const scrapeUpcDatabase = url => new Promise((resolve, reject) => {
 })
 
 const scrapeUpcItemDb = url => new Promise((resolve, reject) => {
-	ajax('GET', url)
+	fetch('GET', url)
 	.then(html => {
 		const productPage = cheerio.load(html)
 		
@@ -130,7 +119,7 @@ const scrapeUpcItemDb = url => new Promise((resolve, reject) => {
 })
 
 const scrapeBarcodelookup = url => new Promise((resolve, reject) => {
-	ajax('GET', url)
+	fetch('GET', url)
 	.then(html => {
 		const productPage = cheerio.load(html)
 		const productData = {}

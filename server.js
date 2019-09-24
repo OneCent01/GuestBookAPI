@@ -141,7 +141,7 @@ app.post('/add-user', async (req, res) => {
 
 })
 
-app.post('/auth-user*', async (req, res) => {
+app.post('/auth-user', async (req, res) => {
 	const reqData = req.body
 
 	const userRes = await getUser(connection, {email: reqData.email})
