@@ -6,38 +6,14 @@ const {
 	verifyToken
 } = require('./security')
 
-const {
-	addUser, 
-    getUser,
-    updateUser,
-	deleteUser,
-	addFace,
-	getFaces,
-	addTransaction,
-	getTransactions,
-	deleteTransaction,
-	addCustomer,
-	getCustomers,
-	deleteCustomer,
-	addProduct,
-	getProducts,
-	updateProduct,
-	deleteProduct,
-	addUserProduct,
-	getUserProducts,
-	updateUserProduct,
-	deleteUserProduct,
-	initGuestBookTables
-} = require('./dbQueries.js')
+const dbApi = require('./dbQueries.js')
 
-const {
-	initAndCreatDbIfNone
-} = require('./initDatabase.js')
+const { initAndCreatDbIfNone } = require('./initDatabase.js')
 
-const {fetchProductData} = require('./scrapeProdData.js')
+const { fetchProductData } = require('./scrapeProdData.js')
 
 const mysql = require('mysql')
-const dotenv = require('dotenv/config');
+const dotenv = require('dotenv/config')
 
 const express = require('express')
 const bodyParser = require('body-parser')
@@ -45,7 +21,7 @@ const bodyParser = require('body-parser')
 const app = express()
 const port = process.env.PORT || 3000
 
-var cors = require('cors')
+const cors = require('cors')
 
 // these options here are what we change to configure connections to 
 // mySQL databases, including external ones
@@ -68,14 +44,6 @@ let connection = mysql.createConnection({
 initAndCreatDbIfNone(connection, connectionOps, dataBase)
 .then(conn => { connection = conn })
 .catch(err => {})
-
-
-// UTIL FUNCTIONS
-const exexuteDbQueryAndForwardRes = (res, queryFn, opts) => {
-	queryFn(connection, opts)
-		.then(queryRes => res.send(JSON.stringify(queryRes)))
-		.catch(err => res.send(JSON.stringify(err)))
-}
 
 // very simple email format validation ensuring the email is in in the form: _@_._
 // anything more restrictive than that is too opinionated
@@ -133,7 +101,7 @@ app.post('/add-user', async (req, res) => {
 			salt: salt,
 			hash: hashed
 		}
-		exexuteDbQueryAndForwardRes(res, addUser, opts)
+		res.send(JSON.stringify(await dbApi.addUser(connection, opts)))
 	} else {
 		res.send(JSON.stringify({
 			success: false, 
@@ -146,7 +114,7 @@ app.post('/add-user', async (req, res) => {
 app.post('/auth-user', async (req, res) => {
 	const reqData = req.body
 
-	const userRes = await getUser(connection, {email: reqData.email})
+	const userRes = await dbApi.getUser(connection, {email: reqData.email})
 	if(!userRes.data || userRes.data.length === 0) {
 		res.send(JSON.stringify({success: false}))
 		return
@@ -174,7 +142,7 @@ app.post('/auth-user', async (req, res) => {
 // add or remove query objects from this array to get different results.
 const getDataQueries = [
 	{
-		query: getUserProducts,
+		query: dbApi.getUserProducts,
 		dataKey: 'userProductData'
 	}
 ]
@@ -205,8 +173,6 @@ app.get('/user-data', async (req, res) => {
 			)
 		)
 	)
-
-	console.log('results: ', results)
 	
 	const unitedData = results.reduce((final, result) => {
 		if(result.success) {
@@ -226,26 +192,26 @@ app.get('/user-data', async (req, res) => {
 })
 
 
-app.get('/get-user/:email?/:id?', (req, res) => {
+app.get('/get-user/:email?/:id?', async (req, res) => {
 	const opts = (
 		req.query.id ? {id: req.query.id}
 		: req.query.email ? {email: req.query.email}
 		: {id: 1}
 	)
-	exexuteDbQueryAndForwardRes(res, getUser, opts)
+	res.send(JSON.stringify(await dbApi.getUser(connection, opts)))
 })
 
-app.put('/update-user', (req, res) => {
+app.put('/update-user', async (req, res) => {
 	const reqData = req.body
 	const opts = {
         id: reqData.id,
         email: reqData.email,
 		pass: reqData.password
 	}
-	exexuteDbQueryAndForwardRes(res, updateUser, opts)
+	res.send(JSON.stringify(await dbApi.getUser(connection, opts)))
 })
 
-app.delete('/delete-user', (req, res) => {
+app.delete('/delete-user', async (req, res) => {
 	const reqData = req.body
 	const opts = {
 		id: reqData.id
@@ -253,60 +219,60 @@ app.delete('/delete-user', (req, res) => {
 
 	// should add a validation step where the password needs to be sent in 
 	// and compared against that stored in the database
-	exexuteDbQueryAndForwardRes(res, deleteUser, opts)
+	res.send(JSON.stringify(await dbApi.getUser(connection, opts)))
 })
 
 /************ TRANSACTIONS ***************/
-app.post('/add-transaction', (req, res) => {
+app.post('/add-transaction', async (req, res) => {
 	const reqData = req.body
 	const opts = {
 		user_id: reqData.user_id,
 		data: reqData.data
 	}
-	exexuteDbQueryAndForwardRes(res, getFaces, opts)
+	res.send(JSON.stringify(await dbApi.getUser(connection, opts)))
 })
 
-app.get('/get-transactions/:user_id?', (req, res) => {
+app.get('/get-transactions/:user_id?', async (req, res) => {
 	const opts = {
 		user_id: req.query.user_id
 	}
-	exexuteDbQueryAndForwardRes(res, getTransactions, opts)
+	res.send(JSON.stringify(await dbApi.getUser(connection, opts)))
 })
 
-app.delete('/delete-transaction', (req, res) => {
+app.delete('/delete-transaction', async (req, res) => {
 	const reqData = req.body
 	const opts = {
 		id: reqData.transaction_id
 	}
-	exexuteDbQueryAndForwardRes(res, deleteTransaction, opts)
+	res.send(JSON.stringify(await dbApi.getUser(connection, opts)))
 })
 
 /************ CUSTOMERS ***************/
-app.post('/add-customer', (req, res) => {
+app.post('/add-customer', async (req, res) => {
 	const reqData = req.body
 	const opts = {
 		user_id: reqData.user_id
 	}
-	exexuteDbQueryAndForwardRes(res, addCustomer, opts)
+	res.send(JSON.stringify(await dbApi.getUser(connection, opts)))
 })
 
-app.get('/get-customers/:user_id?', (req, res) => {
+app.get('/get-customers/:user_id?', async (req, res) => {
 	const opts = {
 		user_id: req.query.user_id
 	}
-	exexuteDbQueryAndForwardRes(res, getCustomers, opts)
+	res.send(JSON.stringify(await dbApi.getUser(connection, opts)))
 })
 
-app.put('/update-customers', (req, res) => {
+app.put('/update-customers', async (req, res) => {
 	// TODO
 })
 
-app.delete('/delete-customers', (req, res) => {
+app.delete('/delete-customers', async (req, res) => {
 	const reqData = req.body
 	const opts = {
 		id: reqData.id
 	}
-	exexuteDbQueryAndForwardRes(res, deleteCustomer, opts)
+	res.send(JSON.stringify(await dbApi.getUser(connection, opts)))
 })
 
 
@@ -315,7 +281,7 @@ const msPerDay = (1000 * 60 * 60 * 24)
 app.get('/scan-product/:barcode?', async (req, res) => {
 	const barcode = req.query.barcode
 
-	const productLookup = await getProducts(connection, {barcodes: [barcode]})
+	const productLookup = await dbApi.getProducts(connection, {barcodes: [barcode]})
 	if(
 		!productLookup.success 
 		|| productLookup.data.length === 0
@@ -323,12 +289,13 @@ app.get('/scan-product/:barcode?', async (req, res) => {
 	) {
 
 		const productDataRes = await fetchProductData(barcode)
+
 		try {
 			const prodOpts = {...productDataRes, barcode}
 			const productAddedRes = await (
 				(productLookup.success && productLookup.data.length)
-					? updateProduct(connection, prodOpts)
-					: addProduct(connection, prodOpts)
+					? dbApi.updateProduct(connection, prodOpts)
+					: dbApi.addProduct(connection, prodOpts)
 			)
 
 			if(!productAddedRes.success) {
@@ -342,32 +309,32 @@ app.get('/scan-product/:barcode?', async (req, res) => {
 		}
 	}
 
-	const updatedProductLookup = await getProducts(connection, {barcodes: [barcode]})
+	const updatedProductLookup = await dbApi.getProducts(connection, {barcodes: [barcode]})
 	res.send(JSON.stringify(updatedProductLookup))
 })
 
-app.get('/get-product/:ids?', (req, res) => {
+app.get('/get-product/:ids?', async (req, res) => {
 	const opts = {
 		product_ids: req.query.ids.split('|')
 	}
-	exexuteDbQueryAndForwardRes(res, getProducts, opts)
+	res.send(JSON.stringify(await dbApi.getProducts(connection, opts)))
 })
 
-app.put('/update-product', (req, res) => {
+app.put('/update-product', async (req, res) => {
 	const reqData = req.body
 	const opts = {
 		product_id: reqData.product_id,
 		attrs: reqData.attrs
 	}
-	exexuteDbQueryAndForwardRes(res, updateProduct, opts)
+	res.send(JSON.stringify(await dbApi.updateProduct(connection, opts)))
 })
 
-app.delete('/delete-product', (req, res) => {
+app.delete('/delete-product', async (req, res) => {
 	const reqData = req.body
 	const opts = {
 		product_id: reqData.product_id
 	}
-	exexuteDbQueryAndForwardRes(res, deleteProduct, opts)
+	res.send(JSON.stringify(await dbApi.deleteProduct(connection, opts)))
 })
 
 
@@ -376,44 +343,44 @@ app.post('/add-user-product', async (req, res) => {
 	const reqData = req.body
 	const barcode = reqData.barcode
 
-	const userProductLookup = await getUserProduct(connection, {barcode})
+	const userProductLookup = await dbApi.getUserProduct(connection, {barcode})
 
 	const upsertUserProductRes = await (
 		userProductLookup.success
-		? updateUserProduct(connection, {/*TODO*/})
-		: addUserProduct(connection, {/*TODO*/})
+		? dbApi.updateUserProduct(connection, {/*TODO*/})
+		: dbApi.addUserProduct(connection, {/*TODO*/})
 	)
 	
 	if(!upsertUserProductRes.success) {
 		res.send(JSON.stringify(upsertUserProductRes))
 	} else {
-		const updatedUserProductLookup = await getUserProduct(connection, {barcode})
+		const updatedUserProductLookup = await dbApi.etUserProduct(connection, {barcode})
 		res.send(JSON.stringify(updatedUserProductLookup))
 	}
 })
 
-app.get('/get-user-products/:user_id?', (req, res) => {
+app.get('/get-user-products/:user_id?', async (req, res) => {
 	const opts = {
 		user_id: req.query.user_id
 	}
-	exexuteDbQueryAndForwardRes(res, getUserProducts, opts)
+	res.send(JSON.stringify(await dbApi.getUserProducts(connection, opts)))
 })
 
-app.put('/update-user-product', (req, res) => {
+app.put('/update-user-product', async (req, res) => {
 	const reqData = req.body
 	const opts = {
 		user_product_id: reqData.user_product_id,
 		attrs: reqData.attrs
 	}
-	exexuteDbQueryAndForwardRes(res, updateUserProduct, opts)
+	res.send(JSON.stringify(await dbApi.updateUserProduct(connection, opts)))
 })
 
-app.delete('/delete-user-product', (req, res) => {
+app.delete('/delete-user-product', async (req, res) => {
 	const reqData = req.body
 	const opts = {
 		user_product_id: reqData.user_product_id
 	}
-	exexuteDbQueryAndForwardRes(res, deleteUserProduct, opts)
+	res.send(JSON.stringify(await dbApi.deleteUserProduct(connection, opts)))
 })
 
 /*********** START THE SERVER ************/

@@ -173,7 +173,6 @@ const objectKeysToLowerCase = object => Object.keys(object).reduce((final, prop)
 
 const uniteProductData = async dataPromise => {
 	const data = await dataPromise
-	console.log('data: ', data)
 
 	return data.reduce((final, datum) => ({
 		...final, 
@@ -183,7 +182,7 @@ const uniteProductData = async dataPromise => {
 			...(
 				datum.title ? [datum.title] 
 				: (datum.titles && datum.titles.length) ? datum.titles 
-				: datum.Description ? [datum.Description]
+				: datum.description ? [datum.Description]
 				: []
 			)
 		],
