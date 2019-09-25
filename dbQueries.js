@@ -15,10 +15,10 @@ const initGuestBookTables = (conn) => executeQueries(conn, [
 	'CREATE TABLE CustomerFaces(id int not null auto_increment,face_id int,customer_id varchar(255),PRIMARY KEY(id),FOREIGN KEY(face_id) REFERENCES Faces(id));',
 	'CREATE TABLE CustomerData(id int not null auto_increment,customer_id int,user_data text,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id));',
 	'CREATE TABLE CustomerTransactions(id int not null auto_increment,customer_id int,transaction_id int,PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id),FOREIGN KEY(transaction_id) REFERENCES Transactions(id));',
-	'CREATE TABLE Products(id int not null auto_increment unique,name varchar(255),category varchar(255),barcode text, description varchar(255),img_urls varchar(255),price_data varchar(255),PRIMARY KEY(id));',
-	'CREATE TABLE UserProducts(id int not null auto_increment unique,user_id int not null,product_id int not null, SKU varchar(255),stock int,price decimal,history varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Products(id));',
-	'CREATE TABLE Images(id int not null auto_increment unique, url text not null, PRIMARY KEY(id), FOREIGN KEY(product_id) references Products(id));',
-	'CREATE TABLE Prices(id int not null auto_increment unique, price not null decimal, PRIMARY KEY(id), FOREIGN KEY(product_id) references Products(id));',
+	'CREATE TABLE Products(id int not null auto_increment unique,category varchar(255),barcode text,PRIMARY KEY(id));',
+	'CREATE TABLE UserProducts(id int not null auto_increment unique,user_id int not null,product_id int, SKU varchar(255),stock int,price decimal,history varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Products(id));',
+	'CREATE TABLE Images(id int not null auto_increment unique, url text not null, product_id int not null, PRIMARY KEY(id), FOREIGN KEY(product_id) REFERENCES Products(id));',
+	'CREATE TABLE Prices(id int not null auto_increment unique, price decimal not null, product_id int, PRIMARY KEY(id), FOREIGN KEY(product_id) REFERENCES Products(id));',
 
 ])
 
@@ -44,7 +44,7 @@ const getCustomers = (conn, opts) => handleQuery(conn, `SELECT * FROM Customers 
 const deleteCustomer = (conn, opts) => handleQuery(conn, `DELETE FROM Customers WHERE id="${opts.id}";`)
 
 /*PRODUCTS*/
-const addProduct = (conn, opts) => handleQuery(conn, `INSERT INTO Products (category, barcode, description, img_urls, price_data) VALUES ("${opts.category || ''}", "${opts.barcode}", "${opts.description || ''}", "${opts.img_urls || ''}", "${opts.price_data || ''}");`)
+const addProduct = (conn, opts) => handleQuery(conn, `INSERT INTO Products (category, barcode) VALUES ("${opts.category || ''}", "${opts.barcode}");`)
 const getProducts = (conn, opts) => handleQuery(conn, `SELECT * FROM Products WHERE barcode in (${
 	opts.barcodes.reduce((final, code, i) => i ? `${final}, "${code}"` : `"${code}"`, '')
 });`)
@@ -53,14 +53,22 @@ const updateProduct = (conn, opts) => handleQuery(conn, `UPDATE Products SET ${
 } WHERE id="${opts.product_id}";`)
 const deleteProduct = (conn, opts) => handleQuery(conn, `DELETE FROM Products WHERE id="${opts.product_id}";`)
 
-const addImage = (conn, opts) => handleQuery(conn, `INSERT INTO Images (url, product_id) values ("${opts.image_url}", "${opts.product_id}");`)
+const addImages = (conn, opts) => handleQuery(
+	conn, 
+	`INSERT INTO Images (url, product_id) values ${
+		opts.images.map(
+			image_url => `("${image_url}", "${opts.product_id}")`
+		).join(',')
+	};`
+)
+
 const getImages = (conn, opts) => handleQuery(conn, `SELECT * FROM Images WHERE product_id="${opts.product_id}";`)
 
 const addPrice = (conn, opts) => handleQuery(conn, `INSERT INTO Images (price, product_id) values ("${opts.price}", "${opts.product_id}");`)
 const getPrices = (conn, opts) => handleQuery(conn, `SELECT * FROM Prices WHERE product_id="${opts.product_id}";`)
 
 /*USER PRODUCTS*/
-const addUserProduct = (conn, opts) => handleQuery(conn, `INSERT INTO UserProducts (user_id, product_id, stock, price, history) VALUES ("${opts.user_id}", "${opts.product_id}", "${opts.stock}", "${opts.price}" , "${opts.history}")`)
+const addUserProduct = (conn, opts) => handleQuery(conn, `INSERT INTO UserProducts (user_id, product_id, stock) VALUES ("${opts.user_id}", "${opts.product_id}", "${opts.stock}")`)
 const getUserProducts = (conn, opts) => handleQuery(conn, `SELECT * FROM UserProducts WHERE user_id="${opts.user_id}";`)
 const updateUserProduct = (conn, opts) => handleQuery(conn, `UPDATE UserProducts SET ${
 	opts.attrs.reduce((final, attr, i) => i ? `${final}, ${attr.key}="${attr.value}"` : `${attr.key}="${attr.value}"`, '')
@@ -69,7 +77,7 @@ const deleteUserProduct = (conn, opts) => handleQuery(conn, `DELETE FROM UserPro
 
 
 module.exports = { 
-	addImage,
+	addImages,
 	getImages,
 	addPrice,
 	getPrices,

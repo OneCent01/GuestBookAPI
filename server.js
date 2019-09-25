@@ -1,3 +1,13 @@
+const mysql = require('mysql')
+const dotenv = require('dotenv/config')
+
+const express = require('express')
+const cors = require('cors')
+const bodyParser = require('body-parser')
+
+const app = express()
+const port = process.env.PORT || 3000
+
 const {
 	secureRandomHex,
 	hash,
@@ -7,21 +17,8 @@ const {
 } = require('./security')
 
 const dbApi = require('./dbQueries.js')
-
 const { initAndCreatDbIfNone } = require('./initDatabase.js')
-
 const { fetchProductData } = require('./scrapeProdData.js')
-
-const mysql = require('mysql')
-const dotenv = require('dotenv/config')
-
-const express = require('express')
-const bodyParser = require('body-parser')
-
-const app = express()
-const port = process.env.PORT || 3000
-
-const cors = require('cors')
 
 // these options here are what we change to configure connections to 
 // mySQL databases, including external ones
@@ -30,7 +27,6 @@ const connectionOps = {
 	user: process.env.DB_USER,
 	password: process.env.DB_PASSWORD
 }
-
 
 // INITIALIZE CONNECTION OPTS, MAY NEED TO CHANGE IF 
 // GUESTBOOK ISN'T CURRENTLY A DB IN THE MYSQL DB
@@ -43,7 +39,7 @@ let connection = mysql.createConnection({
 // DATABASE CONNECTION INITIALIZATION
 initAndCreatDbIfNone(connection, connectionOps, dataBase)
 .then(conn => { connection = conn })
-.catch(err => {})
+.catch(err => alert(`ERROR INITIALIZING THE DATABASE: ${err}`))
 
 // very simple email format validation ensuring the email is in in the form: _@_._
 // anything more restrictive than that is too opinionated
@@ -61,20 +57,27 @@ app.use(cors({
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
 
-const noAuthRequiredPahts = ['/auth-user', '/add-user']
+const unrestrictedPaths = ['/auth-user', '/add-user']
 
+// every request will be passed through this endpoint,
+// to check the senders credentials (token) and possibly  
+// terminate the endpoint fallthrough
 app.use('', (req, res, next) => {
 	const path = req.path 
-
-	if(!noAuthRequiredPahts.find(openPath => path.includes(openPath))) {
+	// if the use is attempting to ping one of the unrestricted
+	// endpoints, let them through. Otherwise, 
+	if(!unrestrictedPaths.includes(path)) {
 		const headers = req.headers
 		const token = headers.authorization
+		// check the whether the token was sent in and if it's valid
 		const isValid = (token && token.length && verifyToken(token))
 		if(isValid && isValid.success) {
-			req.user = isValid.user
+			// attach the user data to the request object passed 
+			// to the next endpoint
+			req.user = isValid.user.id
 			next()
 		} else {
-			res.send(JOSN.stringify({
+			res.send(JSON.stringify({
 				success: false, 
 				error: 'INVALID TOKEN'
 			}))
@@ -108,7 +111,6 @@ app.post('/add-user', async (req, res) => {
 			error: 'INVALID EMAIL FORMAT, MUST CONFORM TO THE STRUCTURE: _@_._'
 		}))
 	}
-
 })
 
 app.post('/auth-user', async (req, res) => {
@@ -147,7 +149,7 @@ const getDataQueries = [
 	}
 ]
 app.get('/user-data', async (req, res) => {
-	const user = req.user.id
+	const user = req.user
 	const user_id = user.id
 
 	// each query is a promise, so lets execute them concurrently,  
@@ -287,13 +289,18 @@ app.get('/scan-product/:barcode?', async (req, res) => {
 		|| productLookup.data.length === 0
 		|| productLookup.data.lastLookup < (Date.now() - (msPerDay * 90))
 	) {
-
 		const productDataRes = await fetchProductData(barcode)
 
 		try {
 			const prodOpts = {...productDataRes, barcode}
+			const productExists = (
+				productLookup.success 
+				&& productLookup.data
+				&& productLookup.data.length
+			)
+			// to add a product, first add the product to the products table,
 			const productAddedRes = await (
-				(productLookup.success && productLookup.data.length)
+				productExists
 					? dbApi.updateProduct(connection, prodOpts)
 					: dbApi.addProduct(connection, prodOpts)
 			)
@@ -301,16 +308,38 @@ app.get('/scan-product/:barcode?', async (req, res) => {
 			if(!productAddedRes.success) {
 				res.send(JSON.stringify(productAddedRes))
 				return
-			} 
+			}
+
+			const updatedProductLookup = await dbApi.getProducts(connection, {barcodes: [barcode]})
+			if(
+				updatedProductLookup.success
+				&& updatedProductLookup.data
+				&& updatedProductLookup.data.length
+			) {
+				const updatedProduct = updatedProductLookup.data[0]
+				// then add the product's images to the images table
+				// the product is saved in the DB now; this boolean 
+				// indicates that we just made it, so we know images 
+				// need to be added and associated with the user:
+				if(!productExists) {
+					const addImagesRes = await dbApi.addImages(connection, {
+						product_id: updatedProduct.id,
+						images: productDataRes.images
+					})
+					if(!addImagesRes.success) {
+						res.send(JSON.stringify(addImagesRes))
+						return
+					}
+				}
+			}
+
+			res.send(JSON.stringify(updatedProductLookup))
 
 		} catch(e) {
 			res.send(JSON.stringify(e))
-			return
 		}
 	}
 
-	const updatedProductLookup = await dbApi.getProducts(connection, {barcodes: [barcode]})
-	res.send(JSON.stringify(updatedProductLookup))
 })
 
 app.get('/get-product/:ids?', async (req, res) => {
@@ -342,28 +371,31 @@ app.delete('/delete-product', async (req, res) => {
 app.post('/add-user-product', async (req, res) => {
 	const reqData = req.body
 	const barcode = reqData.barcode
+	const product_id = reqData.product_id
+	const product_stock = reqData.stock
+	const user = req.user
 
-	const userProductLookup = await dbApi.getUserProduct(connection, {barcode})
+	const productLookup = await dbApi.getUserProducts(
+		connection, 
+		{user_id: user.id}
+	)
 
+	const queryOptions = {
+		user_id: user.id,
+		product_id: product_id,
+		stock: product_stock
+	}
 	const upsertUserProductRes = await (
-		userProductLookup.success
-		? dbApi.updateUserProduct(connection, {/*TODO*/})
-		: dbApi.addUserProduct(connection, {/*TODO*/})
+		(
+			productLookup.success 
+			&& productLookup.data 
+			&& productLookup.data.length
+		)
+		? dbApi.updateUserProduct(connection, queryOptions)
+		: dbApi.addUserProduct(connection, queryOptions)
 	)
 	
-	if(!upsertUserProductRes.success) {
-		res.send(JSON.stringify(upsertUserProductRes))
-	} else {
-		const updatedUserProductLookup = await dbApi.etUserProduct(connection, {barcode})
-		res.send(JSON.stringify(updatedUserProductLookup))
-	}
-})
-
-app.get('/get-user-products/:user_id?', async (req, res) => {
-	const opts = {
-		user_id: req.query.user_id
-	}
-	res.send(JSON.stringify(await dbApi.getUserProducts(connection, opts)))
+	res.send(JSON.stringify(upsertUserProductRes))
 })
 
 app.put('/update-user-product', async (req, res) => {

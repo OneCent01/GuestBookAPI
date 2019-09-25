@@ -1,4 +1,4 @@
-const {fetch}  = require('./fetch.js')
+const { fetch }  = require('./fetch.js')
 const cheerio = require('cheerio')
 
 const scrapeKeHEDatabase = url => new Promise((resolve, reject) => {
@@ -172,17 +172,17 @@ const objectKeysToLowerCase = object => Object.keys(object).reduce((final, prop)
 }, {})
 
 const uniteProductData = async dataPromise => {
-	const data = await dataPromise
+	const data = (await dataPromise).map(objectKeysToLowerCase)
 
 	return data.reduce((final, datum) => ({
 		...final, 
-		...objectKeysToLowerCase(datum),
+		...datum,
 		titles: [
 			...final.titles, 
 			...(
 				datum.title ? [datum.title] 
 				: (datum.titles && datum.titles.length) ? datum.titles 
-				: datum.description ? [datum.Description]
+				: datum.description ? [datum.description]
 				: []
 			)
 		],
@@ -191,7 +191,7 @@ const uniteProductData = async dataPromise => {
 			...(
 				datum.images ? datum.images
 				: datum.image ? [datum.image]
-				: datum.imgUrl ? [datum.imgUrl]
+				: datum.imgurl ? [datum.imgurl]
 				: []
 			)
 		]
