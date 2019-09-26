@@ -16,7 +16,7 @@ const {
 	verifyToken
 } = require('./security')
 
-const dbApi = require('./dbQueries.js')
+const dbApi = require('./database/dbQueries.js')
 const { initAndCreatDbIfNone } = require('./initDatabase.js')
 const { fetchProductData } = require('./scrapeProdData.js')
 
@@ -104,7 +104,14 @@ app.post('/add-user', async (req, res) => {
 			salt: salt,
 			hash: hashed
 		}
-		res.send(JSON.stringify(await dbApi.addUser(connection, opts)))
+		try {
+			const addUserRes = await dbApi.addUser(connection, opts)
+			res.send(JSON.stringify(addUserRes))
+
+		} catch(e) {
+			res.send(JSON.stringify(e))
+
+		}
 	} else {
 		res.send(JSON.stringify({
 			success: false, 
@@ -116,24 +123,29 @@ app.post('/add-user', async (req, res) => {
 app.post('/auth-user', async (req, res) => {
 	const reqData = req.body
 
-	const userRes = await dbApi.getUser(connection, {email: reqData.email})
-	if(!userRes.data || userRes.data.length === 0) {
-		res.send(JSON.stringify({success: false}))
-		return
-	}
-	const user = userRes.data[0]
-	const saltedPass = `${user.salt}${reqData.password}`
-	const verified = await verify(saltedPass, user.hash)
+	try {
+		const userRes = await dbApi.getUser(connection, {email: reqData.email})
+		if(!userRes.data || userRes.data.length === 0) {
+			res.send(JSON.stringify({success: false}))
+			return
+		}
+		const user = userRes.data[0]
+		const saltedPass = `${user.salt}${reqData.password}`
+		const verified = await verify(saltedPass, user.hash)
+	
+		if(verified) {
+			issueToken(user)
+			.then(token => res.send(JSON.stringify({
+				success: true, 
+				token: token
+			})))
+			.catch(err => res.send(JSON.stringify({success: false})))
+			
+		} else {
+			res.send(JSON.stringify({success: false}))
+		}
 
-	if(verified) {
-		issueToken(user)
-		.then(token => res.send(JSON.stringify({
-			success: true, 
-			token: token
-		})))
-		.catch(err => res.send(JSON.stringify({success: false})))
-		
-	} else {
+	} catch(e) {
 		res.send(JSON.stringify({success: false}))
 	}
 })

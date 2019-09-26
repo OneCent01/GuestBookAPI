@@ -11,11 +11,16 @@ const initConnection = (conn) => new Promise((resolve, reject) => {
 const killConnection = (conn) => new Promise((resolve, reject) => conn.end(resolve))
 
 const handleQuery = (conn, query) => new Promise((resolve, reject) => {
-	conn.query(query, (err, rows) => (
-		err !== null 
-		? reject({success: false, error: err}) 
-		: resolve({success: true, data: rows})
-	))
+	try {
+		conn.query(query, (err, rows) => (
+			err !== null 
+			? reject({success: false, error: err}) 
+			: resolve({success: true, data: rows})
+		))
+
+	} catch(e) {
+		reject({success: false, error: e})
+	}
 })
 
 const handleQueries = (conn, queries, cb, i=0, responses=[]) => {

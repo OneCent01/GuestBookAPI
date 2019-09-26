@@ -3,7 +3,7 @@ const mysql = require('mysql')
 const {
 	initGuestBookDatabase,
 	initGuestBookTables
-} = require('./dbQueries.js')
+} = require('./database/dbQueries.js')
 
 const {
 	initConnection,
