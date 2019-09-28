@@ -166,41 +166,58 @@ const lookupProduct = (barcode, baseUrl) => {
 	return scaperFound ? scraperPromise(url) : scraperlessPromise()
 }
 
-const objectKeysToLowerCase = object => Object.keys(object).reduce((final, prop) => {
-	final[prop.toLowerCase()] = object[prop]
-	return final
-}, {})
-
-const uniteProductData = async dataPromise => {
-	const data = (await dataPromise).map(objectKeysToLowerCase)
-
-	return data.reduce((final, datum) => ({
-		...final, 
-		...datum,
-		titles: [
-			...final.titles, 
-			...(
-				datum.title ? [datum.title] 
-				: (datum.titles && datum.titles.length) ? datum.titles 
-				: datum.description ? [datum.description]
-				: []
-			)
-		],
-		images: [
-			...final.images,
-			...(
-				datum.images ? datum.images
-				: datum.image ? [datum.image]
-				: datum.imgurl ? [datum.imgurl]
-				: []
-			)
-		]
-	}), {
-		titles:[],
-		images: []
-	})
+const objectKeysToLowerCase = object => {
+	return Object.keys(object).reduce((final, prop) => {
+		final[prop.toLowerCase()] = object[prop]
+		return final
+	}, {})
 }
 
+const uniteProductData = data => data.map(objectKeysToLowerCase).reduce((final, datum) => ({
+	...final, 
+	...datum,
+	titles: [
+		...final.titles, 
+		...(
+			datum.title ? [datum.title] 
+			: (datum.titles && datum.titles.length) ? datum.titles 
+			: datum.description ? [datum.description]
+			: []
+		)
+	],
+	images: [
+		...final.images,
+		...(
+			datum.images ? datum.images
+			: datum.image ? [datum.image]
+			: datum.imgurl ? [datum.imgurl]
+			: []
+		)
+	]
+}), {
+	titles:[],
+	images: []
+})
+
+const normalizeTitleString = string => string.split(' ').map(word => `${word.slice(0, 1).toUpperCase()}${word.slice(1).toLowerCase()}`).join(' ')
+
+const uniqueOnly = array => array.filter((val, i, arr) => arr.indexOf(val) === i)
+
+const compressProductData = object => Object.keys(object).reduce((final, prop) => {
+	const currentVal = (
+		prop === 'titles' 
+		? object[prop].map(normalizeTitleString) 
+		: object[prop]
+	)
+
+	final[prop] = (
+		currentVal && Array.isArray(currentVal) 
+		? uniqueOnly(currentVal) 
+		: currentVal
+	)
+
+	return final
+}, {})
 
 const lookups = [
 	'https://www.upcdatabase.com/item/|BARCODE|',
@@ -209,11 +226,15 @@ const lookups = [
 	'https://gourmet.kehe.com/search?search=|BARCODE|'
 ]
 
-const fetchProductData = barcode => uniteProductData(
-	Promise.all(
-		lookups.map(
-			lookup => lookupProduct(
-				barcode, lookup
+const fetchProductData = async barcode => (
+	compressProductData(
+		uniteProductData(
+			await Promise.all(
+				lookups.map(
+					lookup => lookupProduct(
+						barcode, lookup
+					)
+				)
 			)
 		)
 	)

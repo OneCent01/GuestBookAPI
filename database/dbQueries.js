@@ -10,7 +10,7 @@ const initGuestBookTables = (conn) => executeQueries(conn, [
 	'CREATE TABLE Customers(id int  not null auto_increment,user_id int,PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
 	'CREATE TABLE Transactions(id int not null auto_increment,user_id int,customer_id int,transaction_data varchar(255),PRIMARY KEY(id),FOREIGN KEY(customer_id) REFERENCES Customers(id),FOREIGN KEY(user_id) REFERENCES Users(id));',
 	'CREATE TABLE Products(id int not null auto_increment unique, barcode text, PRIMARY KEY(id));',
-	'CREATE TABLE UserProducts(id int not null auto_increment unique,user_id int not null,product_id int, SKU varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Products(id));',
+	'CREATE TABLE UserProducts(id int not null auto_increment unique, stock int, user_id int not null,product_id int, SKU varchar(255),PRIMARY KEY(id),FOREIGN KEY(user_id) REFERENCES Products(id));',
 	'CREATE TABLE ProductImages(id int not null auto_increment unique, url text not null, product_id int not null, PRIMARY KEY(id), FOREIGN KEY(product_id) REFERENCES Products(id));',
 	'CREATE TABLE UserProductPrices(id int not null auto_increment unique, price decimal not null, user_product_id int, PRIMARY KEY(id), FOREIGN KEY(user_product_id) REFERENCES UserProducts(id));',
 	'CREATE TABLE Categories(id int not null auto_increment unique, category text, PRIMARY KEY(id));',
@@ -28,6 +28,35 @@ const getUser = (conn, opts) => handleQuery(
 	`SELECT * FROM Users 
 	WHERE email="${opts.email}";`
 )
+const getUserData = (conn, opts) => new Promise(async (resolve, reject) => {
+	try {
+		const userProductsRes = await handleQuery(
+			conn, 
+			`SELECT product_id, stock 
+			FROM UserProducts 
+			WHERE user_id=${opts.user_id};`
+		)
+		const userProducts = await Promise.all(userProductsRes.data.map(
+			async product => ({
+				...product, 
+				titles: (await handleQuery(
+					conn, 
+					`SELECT title 
+					FROM ProductTitles 
+					WHERE product_id="${product.product_id}";`
+				)).data.map(data=>data.title)
+			})
+		))
+
+		resolve({
+			success: userProductsRes.success, 
+			data: userProducts
+		})
+
+	} catch(e) {
+		reject(e)
+	}
+})
 
 /*TRANSACTIONS*/
 const addTransaction = (conn, opts) => handleQuery(conn, `INSERT INTO Transactions (user_id, transaction_data) VALUES ("${opts.user_id}", "${opts.data}");`)
@@ -43,6 +72,16 @@ const getProducts = (conn, opts) => handleQuery(conn, `SELECT * FROM Products WH
 	opts.barcodes.map(barcode => `"${barcode}"`).join(', ')
 });`)
 
+/*TITLES*/
+const addTitles = (conn, opts) => handleQuery(
+	conn, 
+	`INSERT INTO ProductTitles (title, product_id) 
+	VALUES ${opts.titles.map(title => `("${title}", "${opts.product_id}")`).join(', ')};`
+)
+
+const getTitles = (conn, opts) => handleQuery(conn, ``)
+
+/*IMAGES*/
 const addImages = (conn, opts) => handleQuery(
 	conn, 
 	`INSERT INTO ProductImages (url, product_id) values ${
@@ -53,6 +92,7 @@ const addImages = (conn, opts) => handleQuery(
 )
 const getImages = (conn, opts) => handleQuery(conn, `SELECT * FROM ProductImages WHERE product_id="${opts.product_id}";`)
 
+/*ADD PRICE*/
 const addPrice = (conn, opts) => handleQuery(conn, `INSERT INTO ProductImages (price, product_id) values ("${opts.price}", "${opts.product_id}");`)
 const getPrices = (conn, opts) => handleQuery(conn, `SELECT * FROM Prices WHERE product_id="${opts.product_id}";`)
 
@@ -66,6 +106,8 @@ module.exports = {
 	initGuestBookTables,
 	addUser,
 	getUser,
+	addTitles,
+	getUserData,
 	addTransaction,
 	getTransactions,
 	addCustomer,
